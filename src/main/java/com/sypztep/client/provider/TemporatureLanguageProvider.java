@@ -21,6 +21,9 @@ public class TemporatureLanguageProvider extends FabricLanguageProvider {
         translate.add("death.attack.hypothermia.player", "%1$s froze to death whilst fighting %2$s");
         translate.add("death.attack.heatstroke", "%1$s died of heatstroke");
         translate.add("death.attack.heatstroke.player", "%1$s died of heatstroke whilst fighting %2$s");
+
+        translate.add("key.temporature.metabolism", "Metabolism");
+        translate.add("key.category.temporature.survival", "Survival");
     }
 
     private void generateConfig(TranslationBuilder translate) {
@@ -29,36 +32,44 @@ public class TemporatureLanguageProvider extends FabricLanguageProvider {
         // Main title
         translate.add(cfg + "title", "Temporature Configuration");
 
-        // =====================================
-        // TEMPERATURE CATEGORY
-        // =====================================
+        // ── Temperature Category ──
         translate.add(cfg + "category.temperature", "Temperature");
         translate.add(cfg + "category.temperature.tooltip", "Body temperature, weather exposure, and thermal damage");
-        translate.add(cfg + "temperature.rate", "Temperature System");
-        translate.add(cfg + "temperature.rate.description", "Enable/Disable if you want to playing with temperature system, which includes body temperature, weather exposure, and thermal damage. Body temperature is affected by world temperature, and heat/cold sources in the environment. If body temperature exceeds heat threshold or drops below cold threshold, player takes periodic damage until temperature returns to safe range.");
-        translate.add(cfg + "temperature.min_habitable", "Min Habitable Temperature");
-        translate.add(cfg + "temperature.min_habitable.description", "minimum temperature at which player can survive without taking damage from cold");
-        translate.add(cfg + "temperature.max_habitable", "Max Habitable Temperature");
-        translate.add(cfg + "temperature.max_habitable.description", "maximum temperature at which player can survive without taking damage from heat");
+
+        // Core Temperature group
         translate.add(cfg + "temperature.core", "Core Temperature");
-        translate.add(cfg + "temperature.core.description", "Core temperature system configuration");
+        translate.add(cfg + "temperature.core.description", "Controls how body temperature accumulates from the environment and when damage is dealt");
         translate.add(cfg + "temperature.enable", "Enable Temperature System");
-        translate.add(cfg + "temperature.enable.description", "Master toggle for body/world temperature, armor insulation, and thermal damage");
+        translate.add(cfg + "temperature.enable.description", "Master toggle for the temperature system including body/world temperature and thermal damage");
         translate.add(cfg + "temperature.chase_rate", "Body Chase Rate");
-        translate.add(cfg + "temperature.chase_rate.description", "How fast body temperature chases world temperature per second");
-        translate.add(cfg + "temperature.cold_threshold", "Cold Damage Threshold");
-        translate.add(cfg + "temperature.cold_threshold.description", "Body temperature below this value deals hypothermia damage");
-        translate.add(cfg + "temperature.heat_threshold", "Heat Damage Threshold");
-        translate.add(cfg + "temperature.heat_threshold.description", "Body temperature above this value deals heatstroke damage");
+        translate.add(cfg + "temperature.chase_rate.description", "Multiplier on how fast body temperature changes when outside the habitable band");
+        translate.add(cfg + "temperature.min_habitable", "Min Habitable Temperature");
+        translate.add(cfg + "temperature.min_habitable.description", "Lower bound of the safe temperature band in MC units (1 MC = 25\u00B0C). Below this, body temperature starts dropping");
+        translate.add(cfg + "temperature.max_habitable", "Max Habitable Temperature");
+        translate.add(cfg + "temperature.max_habitable.description", "Upper bound of the safe temperature band in MC units. Above this, body temperature starts rising");
         translate.add(cfg + "temperature.damage_interval", "Damage Interval (ticks)");
-        translate.add(cfg + "temperature.damage_interval.description", "Ticks between temperature damage pulses");
+        translate.add(cfg + "temperature.damage_interval.description", "Base ticks between temperature damage pulses at the Freezing/Burning threshold");
         translate.add(cfg + "temperature.base_damage", "Base Damage");
-        translate.add(cfg + "temperature.base_damage.description", "Base HP damage per temperature pulse; scales with severity beyond threshold");
+        translate.add(cfg + "temperature.base_damage.description", "Percentage of max health dealt per temperature damage pulse");
         translate.add(cfg + "temperature.block_scan_radius", "Block Scan Radius");
-        translate.add(cfg + "temperature.block_scan_radius.description", "Cubic radius around the player scanned for heat/cold sources");
-        translate.add(cfg + "temperature.hot_hydration_mul", "Hot Hydration Drain Multiplier");
-        translate.add(cfg + "temperature.hot_hydration_mul.description", "Extra hydration drain scaling when the body is hot");
-        translate.add(cfg + "temperature.cold_energy_mul", "Cold Energy Drain Multiplier");
-        translate.add(cfg + "temperature.cold_energy_mul.description", "Extra basal energy drain scaling when the body is cold (shivering)");
+        translate.add(cfg + "temperature.block_scan_radius.description", "Cubic radius around the player scanned for heat/cold emitting blocks (campfires, ice, lava, etc.)");
+
+        // ── Wetness group ──
+        translate.add(cfg + "wetness.group", "Wetness");
+        translate.add(cfg + "wetness.group.description", "Controls how water exposure affects temperature. Being wet accumulates a water temperature value that lingers after leaving the water");
+        translate.add(cfg + "wetness.water_soak_speed", "Water Soak Speed");
+        translate.add(cfg + "wetness.water_soak_speed.description", "How fast wetness and water temperature accumulate while submerged per tick");
+        translate.add(cfg + "wetness.rain_soak_speed", "Rain Soak Speed");
+        translate.add(cfg + "wetness.rain_soak_speed.description", "How fast wetness and water temperature accumulate while standing in rain per tick");
+        translate.add(cfg + "wetness.max_rain_wetness", "Max Rain Wetness");
+        translate.add(cfg + "wetness.max_rain_wetness.description", "Maximum wetness level reachable from rain alone (0.0 to 1.0). Rain cannot soak beyond this cap");
+        translate.add(cfg + "wetness.dry_rate", "Dry Rate");
+        translate.add(cfg + "wetness.dry_rate.description", "Base rate at which wetness decreases per tick when not in water or rain");
+        translate.add(cfg + "wetness.hot_dry_bonus", "Hot Dry Bonus");
+        translate.add(cfg + "wetness.hot_dry_bonus.description", "Extra drying speed per tick when body temperature is above the warm threshold, scaled by how hot you are");
+        translate.add(cfg + "wetness.cold_dry_multiplier", "Cold Dry Multiplier");
+        translate.add(cfg + "wetness.cold_dry_multiplier.description", "Multiplier on drying speed when body temperature is below the hypothermia threshold. Lower values = slower drying in cold");
+        translate.add(cfg + "wetness.default_water_temp", "Default Water Temperature");
+        translate.add(cfg + "wetness.default_water_temp.description", "Water temperature in MC units used for rain when no biome-specific water temperature is defined");
     }
 }
