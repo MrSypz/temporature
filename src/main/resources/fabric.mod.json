@@ -1,0 +1,46 @@
+{
+	"schemaVersion": 1,
+	"id": "temporature",
+	"version": "${version}",
+	"name": "Temporature",
+	"description": "Simple Temperature mod.",
+	"authors": [
+		"MrSypz"
+	],
+	"contact": {
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/temporature/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.sypztep.Temporature"
+		],
+		"client": [
+			"com.sypztep.client.TemporatureClient"
+		],
+		"modmenu": [
+			"com.sypztep.client.compat.ModMenuIntegration"
+		],
+		"cardinal-components-entity": [
+			"com.sypztep.common.TemperatureEntityComponents"
+		],
+		"fabric-datagen": [
+			"com.sypztep.TemporatureDataGenerator"
+		]
+	},
+	"mixins": [
+		"temporature.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.18.6",
+		"minecraft": "~26.1",
+		"java": ">=25",
+		"fabric-api": "*"
+	},
+	"custom": {
+		"cardinal-components": [
+			"temporature:player_temperature"
+		]
+	}
+}
