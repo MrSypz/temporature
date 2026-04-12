@@ -44,4 +44,23 @@ public final class TemporatureServerConfig {
 
     @SerialEntry
     public float coldEnergyDrainMul = 1.0f;
+
+    // Wetness
+    @SerialEntry
+    public float waterSoakSpeed = 0.02f;
+
+    @SerialEntry
+    public float rainSoakSpeed = 0.005f;
+
+    @SerialEntry
+    public float maxRainWetness = 1.0f;
+
+    @SerialEntry
+    public float dryRate = 0.0008f;
+
+    @SerialEntry
+    public float hotDryBonus = 0.0008f;
+
+    @SerialEntry
+    public float coldDryMultiplier = 0.3f;
 }
