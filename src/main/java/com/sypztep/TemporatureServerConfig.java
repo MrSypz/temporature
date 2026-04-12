@@ -18,6 +18,8 @@ public final class TemporatureServerConfig {
                     .build())
             .build();
 
+    // --- Core Temperature ---
+
     @SerialEntry
     public boolean enableTemperatureSystem = true;
 
@@ -39,13 +41,8 @@ public final class TemporatureServerConfig {
     @SerialEntry
     public int blockScanRadius = 7;
 
-    @SerialEntry
-    public float hotHydrationDrainMul = 1.0f;
+    // --- Wetness ---
 
-    @SerialEntry
-    public float coldEnergyDrainMul = 1.0f;
-
-    // Wetness
     @SerialEntry
     public float waterSoakSpeed = 0.02f;
 
@@ -63,4 +60,7 @@ public final class TemporatureServerConfig {
 
     @SerialEntry
     public float coldDryMultiplier = 0.3f;
+
+    @SerialEntry
+    public double defaultWaterTemp = -0.22;
 }
