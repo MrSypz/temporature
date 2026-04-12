@@ -5,15 +5,13 @@ import dev.isxander.yacl3.api.controller.*;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-import java.awt.*;
-
 public final class TemporatureConfigScreen {
     public static Screen buildScreen(Screen screen) {
-        // =========================================================
-        // TEMPERATURE
-        // =========================================================
         boolean tempEnabled = TemporatureServerConfig.getInstance().enableTemperatureSystem;
 
+        // =========================================================
+        // CORE TEMPERATURE OPTIONS
+        // =========================================================
         Option<Boolean> tempEnableOpt = Option.<Boolean>createBuilder()
                 .name(Component.translatable("config.temporature.temperature.enable"))
                 .description(OptionDescription.of(Component.translatable("config.temporature.temperature.enable.description")))
@@ -24,8 +22,8 @@ public final class TemporatureConfigScreen {
 
         Option<Float> tempRateOpt = Option.<Float>createBuilder()
                 .available(tempEnabled)
-                .name(Component.translatable("config.temporature.temperature.rate"))
-                .description(OptionDescription.of(Component.translatable("config.temporature.temperature.rate.description")))
+                .name(Component.translatable("config.temporature.temperature.chase_rate"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.temperature.chase_rate.description")))
                 .binding(1.0f, () -> TemporatureServerConfig.getInstance().tempRate,
                         newVal -> TemporatureServerConfig.getInstance().tempRate = newVal)
                 .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0.1f, 5.0f).step(0.1f))
@@ -62,9 +60,9 @@ public final class TemporatureConfigScreen {
                 .available(tempEnabled)
                 .name(Component.translatable("config.temporature.temperature.base_damage"))
                 .description(OptionDescription.of(Component.translatable("config.temporature.temperature.base_damage.description")))
-                .binding(2.0f, () -> TemporatureServerConfig.getInstance().tempBaseDamage,
+                .binding(0.02f, () -> TemporatureServerConfig.getInstance().tempBaseDamage,
                         newVal -> TemporatureServerConfig.getInstance().tempBaseDamage = newVal)
-                .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0.5f, 5.0f).step(0.5f))
+                .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0.01f, 0.2f).step(0.01f))
                 .build();
 
         Option<Integer> tempBlockScanRadiusOpt = Option.<Integer>createBuilder()
@@ -76,24 +74,75 @@ public final class TemporatureConfigScreen {
                 .controller(opt -> IntegerSliderControllerBuilder.create(opt).range(3, 12).step(1))
                 .build();
 
-        Option<Float> tempHotHydrationMulOpt = Option.<Float>createBuilder()
+        // =========================================================
+        // WETNESS OPTIONS
+        // =========================================================
+        Option<Float> waterSoakSpeedOpt = Option.<Float>createBuilder()
                 .available(tempEnabled)
-                .name(Component.translatable("config.temporature.temperature.hot_hydration_mul"))
-                .description(OptionDescription.of(Component.translatable("config.temporature.temperature.hot_hydration_mul.description")))
-                .binding(1.0f, () -> TemporatureServerConfig.getInstance().hotHydrationDrainMul,
-                        newVal -> TemporatureServerConfig.getInstance().hotHydrationDrainMul = newVal)
-                .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0f, 3f).step(0.1f))
+                .name(Component.translatable("config.temporature.wetness.water_soak_speed"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.wetness.water_soak_speed.description")))
+                .binding(0.02f, () -> TemporatureServerConfig.getInstance().waterSoakSpeed,
+                        newVal -> TemporatureServerConfig.getInstance().waterSoakSpeed = newVal)
+                .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0.005f, 0.1f).step(0.005f))
                 .build();
 
-        Option<Float> tempColdEnergyMulOpt = Option.<Float>createBuilder()
+        Option<Float> rainSoakSpeedOpt = Option.<Float>createBuilder()
                 .available(tempEnabled)
-                .name(Component.translatable("config.temporature.temperature.cold_energy_mul"))
-                .description(OptionDescription.of(Component.translatable("config.temporature.temperature.cold_energy_mul.description")))
-                .binding(1.0f, () -> TemporatureServerConfig.getInstance().coldEnergyDrainMul,
-                        newVal -> TemporatureServerConfig.getInstance().coldEnergyDrainMul = newVal)
-                .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0f, 3f).step(0.1f))
+                .name(Component.translatable("config.temporature.wetness.rain_soak_speed"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.wetness.rain_soak_speed.description")))
+                .binding(0.005f, () -> TemporatureServerConfig.getInstance().rainSoakSpeed,
+                        newVal -> TemporatureServerConfig.getInstance().rainSoakSpeed = newVal)
+                .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0.001f, 0.05f).step(0.001f))
                 .build();
 
+        Option<Float> maxRainWetnessOpt = Option.<Float>createBuilder()
+                .available(tempEnabled)
+                .name(Component.translatable("config.temporature.wetness.max_rain_wetness"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.wetness.max_rain_wetness.description")))
+                .binding(1.0f, () -> TemporatureServerConfig.getInstance().maxRainWetness,
+                        newVal -> TemporatureServerConfig.getInstance().maxRainWetness = newVal)
+                .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0.1f, 1.0f).step(0.1f))
+                .build();
+
+        Option<Float> dryRateOpt = Option.<Float>createBuilder()
+                .available(tempEnabled)
+                .name(Component.translatable("config.temporature.wetness.dry_rate"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.wetness.dry_rate.description")))
+                .binding(0.0008f, () -> TemporatureServerConfig.getInstance().dryRate,
+                        newVal -> TemporatureServerConfig.getInstance().dryRate = newVal)
+                .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0.0002f, 0.005f).step(0.0002f))
+                .build();
+
+        Option<Float> hotDryBonusOpt = Option.<Float>createBuilder()
+                .available(tempEnabled)
+                .name(Component.translatable("config.temporature.wetness.hot_dry_bonus"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.wetness.hot_dry_bonus.description")))
+                .binding(0.0008f, () -> TemporatureServerConfig.getInstance().hotDryBonus,
+                        newVal -> TemporatureServerConfig.getInstance().hotDryBonus = newVal)
+                .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0.0f, 0.005f).step(0.0002f))
+                .build();
+
+        Option<Float> coldDryMultiplierOpt = Option.<Float>createBuilder()
+                .available(tempEnabled)
+                .name(Component.translatable("config.temporature.wetness.cold_dry_multiplier"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.wetness.cold_dry_multiplier.description")))
+                .binding(0.3f, () -> TemporatureServerConfig.getInstance().coldDryMultiplier,
+                        newVal -> TemporatureServerConfig.getInstance().coldDryMultiplier = newVal)
+                .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0.1f, 1.0f).step(0.1f))
+                .build();
+
+        Option<Double> defaultWaterTempOpt = Option.<Double>createBuilder()
+                .available(tempEnabled)
+                .name(Component.translatable("config.temporature.wetness.default_water_temp"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.wetness.default_water_temp.description")))
+                .binding(-0.22, () -> TemporatureServerConfig.getInstance().defaultWaterTemp,
+                        newVal -> TemporatureServerConfig.getInstance().defaultWaterTemp = newVal)
+                .controller(opt -> DoubleSliderControllerBuilder.create(opt).range(-1.0, 1.0).step(0.02))
+                .build();
+
+        // =========================================================
+        // ENABLE TOGGLE LISTENER
+        // =========================================================
         tempEnableOpt.addEventListener((option, event) -> {
             if (event == OptionEventListener.Event.STATE_CHANGE || event == OptionEventListener.Event.INITIAL) {
                 boolean enable = option.pendingValue();
@@ -104,8 +153,14 @@ public final class TemporatureConfigScreen {
                 tempDamageIntervalOpt.setAvailable(enable);
                 tempBaseDamageOpt.setAvailable(enable);
                 tempBlockScanRadiusOpt.setAvailable(enable);
-                tempHotHydrationMulOpt.setAvailable(enable);
-                tempColdEnergyMulOpt.setAvailable(enable);
+
+                waterSoakSpeedOpt.setAvailable(enable);
+                rainSoakSpeedOpt.setAvailable(enable);
+                maxRainWetnessOpt.setAvailable(enable);
+                dryRateOpt.setAvailable(enable);
+                hotDryBonusOpt.setAvailable(enable);
+                coldDryMultiplierOpt.setAvailable(enable);
+                defaultWaterTempOpt.setAvailable(enable);
             }
         });
 
@@ -115,9 +170,6 @@ public final class TemporatureConfigScreen {
         return YetAnotherConfigLib.createBuilder()
                 .title(Component.translatable("config.temporature.title"))
 
-                // =====================================
-                // TEMPERATURE CATEGORY
-                // =====================================
                 .category(ConfigCategory.createBuilder()
                         .name(Component.translatable("config.temporature.category.temperature"))
                         .tooltip(Component.translatable("config.temporature.category.temperature.tooltip"))
@@ -131,8 +183,17 @@ public final class TemporatureConfigScreen {
                                 .option(tempDamageIntervalOpt)
                                 .option(tempBaseDamageOpt)
                                 .option(tempBlockScanRadiusOpt)
-                                .option(tempHotHydrationMulOpt)
-                                .option(tempColdEnergyMulOpt)
+                                .build())
+                        .group(OptionGroup.createBuilder()
+                                .name(Component.translatable("config.temporature.wetness.group"))
+                                .description(OptionDescription.of(Component.translatable("config.temporature.wetness.group.description")))
+                                .option(waterSoakSpeedOpt)
+                                .option(rainSoakSpeedOpt)
+                                .option(maxRainWetnessOpt)
+                                .option(dryRateOpt)
+                                .option(hotDryBonusOpt)
+                                .option(coldDryMultiplierOpt)
+                                .option(defaultWaterTempOpt)
                                 .build())
                         .build())
                 .save(TemporatureServerConfig.HANDLER::save)
