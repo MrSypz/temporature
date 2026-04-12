@@ -2,6 +2,8 @@ package com.sypztep.common;
 
 import com.sypztep.Temporature;
 import com.sypztep.TemporatureServerConfig;
+import com.sypztep.api.TemperatureEvents;
+import com.sypztep.api.TemporatureApi;
 import com.sypztep.plateau.common.api.PlateauDamageTypes;
 import com.sypztep.system.temperature.TemperatureHelper;
 import net.minecraft.core.particles.ParticleTypes;
@@ -107,17 +109,7 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
                     Math.abs(config.tempRate / 50.0)
             ) * sign;
 
-//            // Nutrition influences the rate
-//            PlayerNutritionComponent nutrition = TemperatureEntityComponents.PLAYER_NUTRITION.get(player);
-//            double hydPct = nutrition.getHydration() / Math.max(1, nutrition.getMaxHydration());
-//            double energyPct = nutrition.getEnergy() / Math.max(1, nutrition.getMaxEnergy());
-//            if (changeBy > 0) {
-//                if (hydPct > 0.70) changeBy *= 0.80;
-//                else if (hydPct < 0.30) changeBy *= 1.30;
-//            } else {
-//                if (energyPct > 0.50) changeBy *= 0.80;
-//                else if (energyPct < 0.10) changeBy *= 1.40;
-//            }
+            changeBy = TemporatureApi.applyRateModifiers(player, changeBy, world, core);
 
             core += changeBy;
         }
@@ -157,8 +149,10 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
         int prevTier = dangerTier(currentZone);
         int curTier = dangerTier(zone);
         if (zone != currentZone) {
+            TemperatureHelper.TempZone oldZone = currentZone;
             if (curTier > prevTier) graceTicks = DANGER_GRACE_TICKS;
             currentZone = zone;
+            TemperatureEvents.ZONE_CHANGED.invoker().onZoneChanged(player, oldZone, zone);
         }
 
         // Apply damage if in danger zone
@@ -232,6 +226,8 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
         float damage = config.tempBaseDamage; // as max health percentage
         if (damage <= 0) return;
 
+        if (!TemperatureEvents.BEFORE_DAMAGE.invoker().beforeDamage(player, currentZone, damage)) return;
+
         PlateauDamageTypes.hurt(player, hot
                         ? player.damageSources().source(Temporature.HEATSTROKE)
                         : player.damageSources().source(Temporature.HYPOTHERMIA),
@@ -257,17 +253,19 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
     private static double minAbs(double a, double b) { return Math.abs(a) <= Math.abs(b) ? a : b; }
 
     private void tickWetness() {
+        TemporatureServerConfig config = TemporatureServerConfig.getInstance();
         boolean inWater = player.isInWater() || player.isUnderWater();
 
-        if (inWater) wetness = Math.min(1f, wetness + 0.02f);
-        else if (player.level().isRainingAt(player.blockPosition())) wetness = Math.min(1f, wetness + 0.005f);
-         else {
-            // Dry faster when the core is hot, slower when cold
+        if (inWater) {
+            wetness = Math.min(1f, wetness + config.waterSoakSpeed);
+        } else if (player.level().isRainingAt(player.blockPosition())) {
+            wetness = Math.min(config.maxRainWetness, wetness + config.rainSoakSpeed);
+        } else {
             float core = coreTemp + baseOffset;
-            float dryRate = 0.0008f;
-            if (core > TemperatureHelper.WARM_DEV) dryRate += (core / 100f) * 0.0008f;
-            else if (core < TemperatureHelper.HYPOTHERMIA_DEV) dryRate *= 0.3f;
-            wetness = Math.max(0f, wetness - dryRate);
+            float dry = config.dryRate;
+            if (core > TemperatureHelper.WARM_DEV) dry += (core / 100f) * config.hotDryBonus;
+            else if (core < TemperatureHelper.HYPOTHERMIA_DEV) dry *= config.coldDryMultiplier;
+            wetness = Math.max(0f, wetness - dry);
         }
     }
 
