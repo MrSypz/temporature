@@ -13,7 +13,7 @@ public final class TemporatureServerConfig {
     public static final ConfigClassHandler<TemporatureServerConfig> HANDLER = ConfigClassHandler.createBuilder(TemporatureServerConfig.class)
             .id(Temporature.id("config"))
             .serializer(config -> GsonConfigSerializerBuilder.create(config)
-                    .setPath(FabricLoader.getInstance().getConfigDir().resolve("leklai_server.json5"))
+                    .setPath(FabricLoader.getInstance().getConfigDir().resolve("temporature_server.json5"))
                     .setJson5(true)
                     .build())
             .build();
@@ -62,5 +62,5 @@ public final class TemporatureServerConfig {
     public float coldDryMultiplier = 0.3f;
 
     @SerialEntry
-    public double defaultWaterTemp = -0.22;
+    public double defaultWaterTemp = -0.93;
 }

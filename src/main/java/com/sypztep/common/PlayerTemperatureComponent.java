@@ -6,6 +6,7 @@ import com.sypztep.api.TemperatureEvents;
 import com.sypztep.api.TemporatureApi;
 import com.sypztep.plateau.common.api.PlateauDamageTypes;
 import com.sypztep.system.temperature.TemperatureHelper;
+import com.sypztep.system.temperature.WorldHelper;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Difficulty;
@@ -36,6 +37,7 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
     private float baseOffset;     // static offset on core (food buff)
     private int baseOffsetTicks;
     private float wetness;
+    private float waterTempAccum;
 
     private int tickCounter;
     private TemperatureHelper.TempZone currentZone = TemperatureHelper.TempZone.NORMAL;
@@ -50,6 +52,7 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
             BASE_OFFSET_TAG = "BaseOffset",
             BASE_OFFSET_TICKS_TAG = "BaseOffsetTicks",
             WETNESS_TAG = "Wetness",
+            WATER_TEMP_ACCUM_TAG = "WaterTempAccum",
             GRACE_TICKS_TAG = "GraceTicks";
 
     public PlayerTemperatureComponent(Player player) {
@@ -69,8 +72,13 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
      * Static core offset from food/potions (±150 scale).
      */
     public float getBaseOffset() { return baseOffset; }
-    public float getWetness() { return wetness;
-    }
+    public float getWetness() { return wetness; }
+
+    /**
+     * Accumulated water temperature in MC units. Ramps toward water temp while submerged,
+     * decays toward 0 while drying. Used by WetnessLayer for worldTemp offset.
+     */
+    public float getWaterTempAccum() { return waterTempAccum; }
 
     public TemperatureHelper.TempZone getZone() { return currentZone; }
 
@@ -87,19 +95,16 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
     public void serverTick() {
         TemporatureServerConfig config = TemporatureServerConfig.getInstance();
         if (!config.enableTemperatureSystem) return;
+        boolean immuneToTemp = player.isCreative() || player.isSpectator()
+                || player.level().getDifficulty() == Difficulty.PEACEFUL;
 
-        tickWetness();
+        if (!player.isSpectator()) tickWetness(); // spectators can't wet
 
-        // Compute world temperature (MC units, unclamped)
         double world = TemperatureHelper.calculateWorldTemp(player);
         this.worldTemp = (float) world;
 
-        // Accumulate core temperature — two-step model matching Cold Sweat exactly.
         int sign = TemperatureHelper.worldTempSign(world);
         double core = coreTemp;
-
-        boolean immuneToTemp = player.isCreative() || player.isSpectator()
-                || player.level().getDifficulty() == Difficulty.PEACEFUL;
 
         // Accumulation toward hot/cold (runs only when outside safe band)
         if (sign != 0 && !immuneToTemp) {
@@ -116,7 +121,7 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
 
         // Drift toward 0 — runs every tick when the core has a sign that
         // differs from the world's sign (e.g. hot body in a safe world, or cold body
-        // in a hot world). Matches Cold Sweat's blend-back behavior.
+        // in a hot world).
         int coreSign = (int) Math.signum(core);
         if (coreSign != 0 && coreSign != sign && !immuneToTemp) {
             double edge = (coreSign == 1)
@@ -165,9 +170,10 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
             TemperatureEntityComponents.PLAYER_TEMPERATURE.sync(player);
         }
     }
+
     @Override
     public void clientTick() {
-        if (wetness > 0 && !player.isInWater()) {
+        if (wetness > 0 && !player.isInWater() && !player.isSpectator()) {
             if (player.getRandom().nextFloat() < wetness) {
                 double rx = player.getBbWidth() * (player.getRandom().nextDouble() - 0.5);
                 double ry = player.getBbHeight() * player.getRandom().nextDouble();
@@ -255,10 +261,12 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
     private void tickWetness() {
         TemporatureServerConfig config = TemporatureServerConfig.getInstance();
         boolean inWater = player.isInWater() || player.isUnderWater();
+        boolean inRain = !inWater && player.level().isRainingAt(player.blockPosition());
 
+        // --- Wetness scalar (0-1) ---
         if (inWater) {
             wetness = Math.min(1f, wetness + config.waterSoakSpeed);
-        } else if (player.level().isRainingAt(player.blockPosition())) {
+        } else if (inRain) {
             wetness = Math.min(config.maxRainWetness, wetness + config.rainSoakSpeed);
         } else {
             float core = coreTemp + baseOffset;
@@ -267,26 +275,64 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
             else if (core < TemperatureHelper.HYPOTHERMIA_DEV) dry *= config.coldDryMultiplier;
             wetness = Math.max(0f, wetness - dry);
         }
+
+        // --- Water temp accumulator (MC units) — Cold Sweat style ---
+        // Ramps toward biome-specific waterTemp (falls back to config default).
+        // Negative = cooling offset. Shrinks toward 0 while drying.
+        double biomeWaterTemp = WorldHelper.getWaterTemp(
+                player.level(), player.level().getBiome(player.blockPosition()),
+                config.defaultWaterTemp);
+
+        double target;
+        float soakRate;
+        if (inWater) {
+            target = biomeWaterTemp;
+            soakRate = config.waterSoakSpeed;
+        } else if (inRain) {
+            target = biomeWaterTemp;
+            soakRate = config.rainSoakSpeed;
+        } else {
+            target = 0;
+            soakRate = 0;
+        }
+
+        if (soakRate > 0) {
+            // Ramp toward target
+            double diff = target - waterTempAccum;
+            double step = Math.min(Math.abs(diff), soakRate) * Math.signum(diff);
+            waterTempAccum += (float) step;
+        }
+
+        // Dry: shrink accumulator toward 0 proportionally to wetness decay
+        if (!inWater) {
+            float core = coreTemp + baseOffset;
+            float dry = config.dryRate;
+            if (core > TemperatureHelper.WARM_DEV) dry += (core / 100f) * config.hotDryBonus;
+            else if (core < TemperatureHelper.HYPOTHERMIA_DEV) dry *= config.coldDryMultiplier;
+            // Scale dry amount by how much accumulated temp remains
+            waterTempAccum = shrink(waterTempAccum, dry * 5f);
+        }
+
+        // Fire interaction: evaporate water and clear fire
+        if (player.level() instanceof ServerLevel && player.isOnFire()) {
+            waterTempAccum = shrink(waterTempAccum, 0.1f);
+            if (wetness > 0) {
+                wetness = Math.max(0f, wetness - 0.05f);
+                player.clearFire();
+            }
+        }
+
+        // Zero out accumulator when fully dry
+        if (wetness <= 0) waterTempAccum = 0;
     }
 
-    public double getHydrationDrainMultiplier() {
-        float core = coreTemp + baseOffset;
-        if (core > TemperatureHelper.WARM_DEV) {
-            // Scale up with how hot you feel, capped by config multiplier
-            return 1.0 + (core - TemperatureHelper.WARM_DEV) / 75.0
-                    * TemporatureServerConfig.getInstance().hotHydrationDrainMul;
-        }
-        if (core < TemperatureHelper.CHILLY_DEV) return 0.9;
-        return 1.0;
-    }
-
-    public double getEnergyDrainMultiplier() {
-        float core = coreTemp + baseOffset;
-        if (core < TemperatureHelper.CHILLY_DEV) {
-            return 1.0 + Math.abs(core - TemperatureHelper.CHILLY_DEV) / 75.0
-                    * TemporatureServerConfig.getInstance().coldEnergyDrainMul;
-        }
-        return 1.0;
+    /**
+     * Shrink value toward 0 by amount, without crossing zero.
+     */
+    private static float shrink(float value, float amount) {
+        if (value > 0) return Math.max(0f, value - amount);
+        if (value < 0) return Math.min(0f, value + amount);
+        return 0f;
     }
 
     @Override
@@ -296,6 +342,7 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
         baseOffset = input.getFloatOr(BASE_OFFSET_TAG, 0f);
         baseOffsetTicks = input.getIntOr(BASE_OFFSET_TICKS_TAG, 0);
         wetness = input.getFloatOr(WETNESS_TAG, 0f);
+        waterTempAccum = input.getFloatOr(WATER_TEMP_ACCUM_TAG, 0f);
         graceTicks = input.getIntOr(GRACE_TICKS_TAG, 0);
         lastCoreTemp = coreTemp;
     }
@@ -307,6 +354,7 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
         output.putFloat(BASE_OFFSET_TAG, baseOffset);
         output.putInt(BASE_OFFSET_TICKS_TAG, baseOffsetTicks);
         output.putFloat(WETNESS_TAG, wetness);
+        output.putFloat(WATER_TEMP_ACCUM_TAG, waterTempAccum);
         output.putInt(GRACE_TICKS_TAG, graceTicks);
     }
 }

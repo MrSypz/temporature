@@ -44,7 +44,7 @@ public class TemporatureLanguageProvider extends FabricLanguageProvider {
         translate.add(cfg + "temperature.chase_rate", "Body Chase Rate");
         translate.add(cfg + "temperature.chase_rate.description", "Multiplier on how fast body temperature changes when outside the habitable band");
         translate.add(cfg + "temperature.min_habitable", "Min Habitable Temperature");
-        translate.add(cfg + "temperature.min_habitable.description", "Lower bound of the safe temperature band in MC units (1 MC = 25\u00B0C). Below this, body temperature starts dropping");
+        translate.add(cfg + "temperature.min_habitable.description", "Lower bound of the safe temperature band in MC units (1 MC = 25°C). Below this, body temperature starts dropping");
         translate.add(cfg + "temperature.max_habitable", "Max Habitable Temperature");
         translate.add(cfg + "temperature.max_habitable.description", "Upper bound of the safe temperature band in MC units. Above this, body temperature starts rising");
         translate.add(cfg + "temperature.damage_interval", "Damage Interval (ticks)");
@@ -70,6 +70,18 @@ public class TemporatureLanguageProvider extends FabricLanguageProvider {
         translate.add(cfg + "wetness.cold_dry_multiplier", "Cold Dry Multiplier");
         translate.add(cfg + "wetness.cold_dry_multiplier.description", "Multiplier on drying speed when body temperature is below the hypothermia threshold. Lower values = slower drying in cold");
         translate.add(cfg + "wetness.default_water_temp", "Default Water Temperature");
-        translate.add(cfg + "wetness.default_water_temp.description", "Water temperature in MC units used for rain when no biome-specific water temperature is defined");
+        translate.add(cfg + "wetness.default_water_temp.description", "Fallback water temperature offset in MC units, used when a biome does not define its own waterTemp. Negative values cool the player (default: -23.3\u00B0C = -0.93 MC)");
+
+        // ── Client Category ──
+        translate.add(cfg + "category.client", "Client");
+        translate.add(cfg + "category.client.tooltip", "Display and HUD settings (client-side only)");
+        translate.add(cfg + "client.display", "Display");
+        translate.add(cfg + "client.display.description", "Controls for HUD elements and visual preferences");
+        translate.add(cfg + "client.show_world_gauge", "Show World Gauge");
+        translate.add(cfg + "client.show_world_gauge.description", "Toggle the world temperature gauge on the HUD");
+        translate.add(cfg + "client.temperature_unit", "Temperature Unit");
+        translate.add(cfg + "client.temperature_unit.description", "Unit used for temperature display on the HUD");
+        translate.add(cfg + "client.unit.celsius", "Celsius (°C)");
+        translate.add(cfg + "client.unit.fahrenheit", "Fahrenheit (°F)");
     }
 }

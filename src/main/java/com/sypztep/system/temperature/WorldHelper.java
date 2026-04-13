@@ -17,7 +17,7 @@ import java.util.OptionalDouble;
 public final class WorldHelper {
     private WorldHelper() {}
 
-    public record BiomeTemp(double lowTemp, double highTemp, OptionalDouble waterTemp) {
+    public record BiomeTemp(double lowTemp, double highTemp) {
         public double blend(double todCos) {
             double mid = (lowTemp + highTemp) * 0.5;
             double amp = (highTemp - lowTemp) * 0.5;
@@ -29,12 +29,25 @@ public final class WorldHelper {
         Registry<BiomeTemperatureData> reg = level.registryAccess().lookupOrThrow(Temporature.BIOME_TEMPERATURES);
         for (BiomeTemperatureData entry : reg) {
             if (entry.biomes().contains(biomeHolder)) {
-                OptionalDouble water = entry.waterTemp().map(OptionalDouble::of).orElse(OptionalDouble.empty());
-                return new BiomeTemp(entry.lowTemp(), entry.highTemp(), water);
+                return new BiomeTemp(entry.lowTemp(), entry.highTemp());
             }
         }
         double mid = fallbackBiomeBase(biomeHolder.value().getBaseTemperature());
-        return new BiomeTemp(mid - 10.0, mid + 5.0, OptionalDouble.empty());
+        return new BiomeTemp(mid - 10.0, mid + 5.0);
+    }
+
+    /**
+     * Returns the biome-specific water temperature if defined in the datapack,
+     * otherwise falls back to the given default (typically from config).
+     */
+    public static double getWaterTemp(Level level, Holder<Biome> biomeHolder, double fallback) {
+        Registry<BiomeTemperatureData> reg = level.registryAccess().lookupOrThrow(Temporature.BIOME_TEMPERATURES);
+        for (BiomeTemperatureData entry : reg) {
+            if (entry.biomes().contains(biomeHolder)) {
+                return entry.waterTemp().orElse(fallback);
+            }
+        }
+        return fallback;
     }
 
     public static double fallbackBiomeBase(float base) {

@@ -37,9 +37,6 @@ public final class TemperatureHelper {
         return (f - 32.0) / 45.0;
     }
 
-    /**
-     * Relative (delta) conversions, no 32° offset.
-     */
     public static double mcToCDelta(double mc) {
         return mc * 25.0;
     }

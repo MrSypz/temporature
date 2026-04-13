@@ -4,7 +4,6 @@ import com.sypztep.Temporature;
 import com.sypztep.common.data.DimensionTemperatureData;
 import com.sypztep.system.temperature.WorldTemperatureLayer;
 import net.minecraft.core.Registry;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -12,9 +11,6 @@ import net.minecraft.world.level.Level;
 import java.util.OptionalDouble;
 
 public final class DimensionLayer implements WorldTemperatureLayer {
-    @Override public Identifier id() { return Temporature.id("dimension"); }
-    @Override public float priority() { return 500f; }
-
     @Override
     public double modify(Player player, double currentTemp) {
         Level level = player.level();

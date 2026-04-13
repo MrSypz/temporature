@@ -21,6 +21,7 @@ public class TemporatureClient implements ClientModInitializer {
 
         FreezeOverlayHudRenderer.register();
         HeatHazeRenderer.register();
+        WorldGaugeHudRenderer.register();
     }
     public static class KeyEvent implements ClientTickEvents.EndTick {
         public KeyEvent() {}

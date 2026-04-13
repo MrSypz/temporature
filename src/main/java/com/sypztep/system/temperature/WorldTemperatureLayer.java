@@ -1,11 +1,8 @@
 package com.sypztep.system.temperature;
 
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 
 public interface WorldTemperatureLayer {
-    Identifier id();
-    float priority();
     double modify(Player player, double currentTemp);
 
     /**

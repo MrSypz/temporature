@@ -8,7 +8,6 @@ import com.sypztep.system.temperature.WorldTemperatureLayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
@@ -26,8 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class BlockScanLayer implements WorldTemperatureLayer {
     private static final int MIN_SCAN_INTERVAL = 5;
-    @Override public Identifier id() { return Temporature.id("block_scan"); }
-    @Override public float priority() { return 300f; }
     @Override public boolean playerSpecific() { return true; }
 
     private static final double LOG_K = 0.52;

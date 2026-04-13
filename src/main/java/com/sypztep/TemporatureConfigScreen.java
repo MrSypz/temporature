@@ -1,5 +1,6 @@
 package com.sypztep;
 
+import com.sypztep.client.TemperatureUnit;
 import dev.isxander.yacl3.api.*;
 import dev.isxander.yacl3.api.controller.*;
 import net.minecraft.client.gui.screens.Screen;
@@ -135,9 +136,30 @@ public final class TemporatureConfigScreen {
                 .available(tempEnabled)
                 .name(Component.translatable("config.temporature.wetness.default_water_temp"))
                 .description(OptionDescription.of(Component.translatable("config.temporature.wetness.default_water_temp.description")))
-                .binding(-0.22, () -> TemporatureServerConfig.getInstance().defaultWaterTemp,
+                .binding(-0.93, () -> TemporatureServerConfig.getInstance().defaultWaterTemp,
                         newVal -> TemporatureServerConfig.getInstance().defaultWaterTemp = newVal)
                 .controller(opt -> DoubleSliderControllerBuilder.create(opt).range(-1.0, 1.0).step(0.02))
+                .build();
+
+        // =========================================================
+        // CLIENT OPTIONS
+        // =========================================================
+        Option<Boolean> showWorldGaugeOpt = Option.<Boolean>createBuilder()
+                .name(Component.translatable("config.temporature.client.show_world_gauge"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.client.show_world_gauge.description")))
+                .binding(true, () -> TemporatureClientConfig.getInstance().showWorldGauge,
+                        newVal -> TemporatureClientConfig.getInstance().showWorldGauge = newVal)
+                .controller(TickBoxControllerBuilder::create)
+                .build();
+
+        Option<TemperatureUnit> temperatureUnitOpt = Option.<TemperatureUnit>createBuilder()
+                .name(Component.translatable("config.temporature.client.temperature_unit"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.client.temperature_unit.description")))
+                .binding(TemperatureUnit.CELSIUS, () -> TemporatureClientConfig.getInstance().temperatureUnit,
+                        newVal -> TemporatureClientConfig.getInstance().temperatureUnit = newVal)
+                .controller(opt -> EnumControllerBuilder.create(opt)
+                        .enumClass(TemperatureUnit.class)
+                        .formatValue(unit -> Component.translatable("config.temporature.client.unit." + unit.name().toLowerCase())))
                 .build();
 
         // =========================================================
@@ -196,7 +218,20 @@ public final class TemporatureConfigScreen {
                                 .option(defaultWaterTempOpt)
                                 .build())
                         .build())
-                .save(TemporatureServerConfig.HANDLER::save)
+                .category(ConfigCategory.createBuilder()
+                        .name(Component.translatable("config.temporature.category.client"))
+                        .tooltip(Component.translatable("config.temporature.category.client.tooltip"))
+                        .group(OptionGroup.createBuilder()
+                                .name(Component.translatable("config.temporature.client.display"))
+                                .description(OptionDescription.of(Component.translatable("config.temporature.client.display.description")))
+                                .option(showWorldGaugeOpt)
+                                .option(temperatureUnitOpt)
+                                .build())
+                        .build())
+                .save(() -> {
+                    TemporatureServerConfig.HANDLER.save();
+                    TemporatureClientConfig.HANDLER.save();
+                })
                 .build()
                 .generateScreen(screen);
     }

@@ -1,22 +1,16 @@
 package com.sypztep.system.temperature.layer;
 
-import com.sypztep.Temporature;
 import com.sypztep.system.temperature.WorldHelper;
 import com.sypztep.system.temperature.WorldTemperatureLayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.biome.Biome;
 
 public final class BiomeLayer implements WorldTemperatureLayer {
     private static final int SPACING = 10;
-    @Override
-    public Identifier id() { return Temporature.id("biome"); }
-
-    @Override
-    public float priority() { return 100f; }
 
     @Override
     public double modify(Player player, double currentTemp) {
@@ -40,9 +34,13 @@ public final class BiomeLayer implements WorldTemperatureLayer {
 
         double avgLow = totalLow / count;
         double avgHigh = totalHigh / count;
-        double todCos = WorldHelper.todCos(level);
         double mid = (avgLow + avgHigh) * 0.5;
         double amp = (avgHigh - avgLow) * 0.5;
+
+        int skyLight = level.getBrightness(LightLayer.SKY, origin);
+        double skylightFactor = skyLight / 15.0;
+        double todCos = WorldHelper.todCos(level) * skylightFactor;
+
         return currentTemp + mid + amp * todCos;
     }
 }

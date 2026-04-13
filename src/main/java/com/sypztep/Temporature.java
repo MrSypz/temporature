@@ -7,7 +7,6 @@ import com.sypztep.common.data.StructureTemperatureData;
 import com.sypztep.plateau.common.api.PlateauDamageTypes;
 import com.sypztep.system.temperature.TemperatureLayerRegistry;
 import net.fabricmc.api.ModInitializer;
-
 import net.fabricmc.fabric.api.event.registry.DynamicRegistries;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;

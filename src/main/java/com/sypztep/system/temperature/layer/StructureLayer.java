@@ -5,7 +5,6 @@ import com.sypztep.common.data.StructureTemperatureData;
 import com.sypztep.system.temperature.WorldTemperatureLayer;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
@@ -16,9 +15,6 @@ import java.util.Map;
 import java.util.OptionalDouble;
 
 public final class StructureLayer implements WorldTemperatureLayer {
-    @Override public Identifier id() { return Temporature.id("structure"); }
-    @Override public float priority() { return 600f; }
-
     @Override
     public double modify(Player player, double currentTemp) {
         Level level = player.level();
