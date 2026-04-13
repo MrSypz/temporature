@@ -1,7 +1,7 @@
 package com.sypztep.client;
 
 import com.sypztep.Temporature;
-import com.sypztep.TemporatureClientConfig;
+import com.sypztep.config.TemporatureClientConfig;
 import com.sypztep.common.TemperatureEntityComponents;
 import com.sypztep.system.temperature.TemperatureHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;

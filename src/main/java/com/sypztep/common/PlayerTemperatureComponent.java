@@ -1,7 +1,7 @@
 package com.sypztep.common;
 
 import com.sypztep.Temporature;
-import com.sypztep.TemporatureServerConfig;
+import com.sypztep.config.TemporatureServerConfig;
 import com.sypztep.api.TemperatureEvents;
 import com.sypztep.api.TemporatureApi;
 import com.sypztep.plateau.common.api.PlateauDamageTypes;

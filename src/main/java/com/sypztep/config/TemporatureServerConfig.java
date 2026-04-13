@@ -1,5 +1,6 @@
-package com.sypztep;
+package com.sypztep.config;
 
+import com.sypztep.Temporature;
 import dev.isxander.yacl3.config.v2.api.ConfigClassHandler;
 import dev.isxander.yacl3.config.v2.api.SerialEntry;
 import dev.isxander.yacl3.config.v2.api.serializer.GsonConfigSerializerBuilder;

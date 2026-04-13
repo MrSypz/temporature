@@ -1,4 +1,4 @@
-package com.sypztep;
+package com.sypztep.config;
 
 import com.sypztep.client.TemperatureUnit;
 import dev.isxander.yacl3.api.*;

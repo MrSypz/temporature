@@ -1,6 +1,6 @@
 package com.sypztep.system.temperature;
 
-import com.sypztep.TemporatureServerConfig;
+import com.sypztep.config.TemporatureServerConfig;
 import net.minecraft.world.entity.player.Player;
 
 /**

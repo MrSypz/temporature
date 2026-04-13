@@ -1,5 +1,6 @@
-package com.sypztep;
+package com.sypztep.config;
 
+import com.sypztep.Temporature;
 import com.sypztep.client.TemperatureUnit;
 import dev.isxander.yacl3.config.v2.api.ConfigClassHandler;
 import dev.isxander.yacl3.config.v2.api.SerialEntry;

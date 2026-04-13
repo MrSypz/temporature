@@ -1,6 +1,6 @@
 package com.sypztep.client.compat;
 
-import com.sypztep.TemporatureConfigScreen;
+import com.sypztep.config.TemporatureConfigScreen;
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;
 import net.fabricmc.api.EnvType;

@@ -1,7 +1,7 @@
 package com.sypztep.system.temperature.layer;
 
 import com.sypztep.Temporature;
-import com.sypztep.TemporatureServerConfig;
+import com.sypztep.config.TemporatureServerConfig;
 import com.sypztep.common.data.BlockTemperatureData;
 import com.sypztep.system.temperature.WorldHelper;
 import com.sypztep.system.temperature.WorldTemperatureLayer;
