@@ -14,19 +14,19 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"com.sypztep.Temporature"
+          "com.sypztep.temporature.Temporature"
 		],
 		"client": [
-			"com.sypztep.client.TemporatureClient"
+			"com.sypztep.temporature.client.TemporatureClient"
 		],
 		"modmenu": [
-			"com.sypztep.client.compat.ModMenuIntegration"
+			"com.sypztep.temporature.client.compat.ModMenuIntegration"
 		],
 		"cardinal-components-entity": [
-			"com.sypztep.common.TemperatureEntityComponents"
+			"com.sypztep.temporature.common.TemperatureEntityComponents"
 		],
 		"fabric-datagen": [
-			"com.sypztep.TemporatureDataGenerator"
+          "com.sypztep.temporature.TemporatureDataGenerator"
 		]
 	},
 	"mixins": [
