@@ -60,7 +60,7 @@ public class TemporatureLanguageProvider extends FabricLanguageProvider {
         translate.add(cfg + "temperature.damage_interval", "Damage Interval (ticks)");
         translate.add(cfg + "temperature.damage_interval.description", "Base ticks between temperature damage pulses at the Freezing/Burning threshold");
         translate.add(cfg + "temperature.base_damage", "Base Damage");
-        translate.add(cfg + "temperature.base_damage.description", "Percentage of max health dealt per temperature damage pulse");
+        translate.add(cfg + "temperature.base_damage.description", "Amount of damage dealt per temperature damage pulse");
         translate.add(cfg + "temperature.block_scan_radius", "Block Scan Radius");
         translate.add(cfg + "temperature.block_scan_radius.description", "Cubic radius around the player scanned for heat/cold emitting blocks (campfires, ice, lava, etc.)");
 

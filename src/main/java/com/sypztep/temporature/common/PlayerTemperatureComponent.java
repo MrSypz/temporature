@@ -229,7 +229,7 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
         }
         damageCooldown = effectiveInterval;
 
-        float damage = config.tempBaseDamage; // as max health percentage
+        float damage = config.tempBaseDamage;
         if (damage <= 0) return;
 
         if (!TemperatureEvents.BEFORE_DAMAGE.invoker().beforeDamage(player, currentZone, damage)) return;
