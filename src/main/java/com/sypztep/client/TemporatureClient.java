@@ -2,9 +2,14 @@ package com.sypztep.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.sypztep.Temporature;
+import com.sypztep.common.network.ConfigSyncPayloadS2C;
+import com.sypztep.config.TemporatureClientConfig;
+import com.sypztep.config.TemporatureServerConfig;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import org.jspecify.annotations.NonNull;
@@ -16,12 +21,25 @@ public class TemporatureClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        TemporatureServerConfig.HANDLER.load();
+        TemporatureClientConfig.HANDLER.load();
+
         METABOLISM = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.temporature.metabolism", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, SURVIVAL));
         KeyEvent.register();
 
         FreezeOverlayHudRenderer.register();
         HeatHazeRenderer.register();
         WorldGaugeHudRenderer.register();
+
+        // Config sync: receive server config and restore local on disconnect
+        ClientPlayNetworking.registerGlobalReceiver(ConfigSyncPayloadS2C.ID, new ConfigSyncPayloadS2C.Receiver());
+        ClientPlayConnectionEvents.DISCONNECT.register((_, _) -> {
+            if (TemporatureServerConfig.isSyncedFromServer()) {
+                TemporatureServerConfig.HANDLER.load();
+                TemporatureServerConfig.setSyncedFromServer(false);
+                Temporature.LOGGER.info("Restored local server config after disconnect");
+            }
+        });
     }
     public static class KeyEvent implements ClientTickEvents.EndTick {
         public KeyEvent() {}

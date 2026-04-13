@@ -24,6 +24,15 @@ public class TemporatureLanguageProvider extends FabricLanguageProvider {
 
         translate.add("key.temporature.metabolism", "Metabolism");
         translate.add("key.category.temporature.survival", "Survival");
+
+        translate.add("screen.temporature.config_sync.title", "Server Config Sync");
+        translate.add("screen.temporature.config_sync.description", "The server wants to override your local Temporature config. Review the changes below:");
+        translate.add("screen.temporature.config_sync.hash", "Hash: %s");
+        translate.add("screen.temporature.config_sync.changes", "Changes (%s)");
+        translate.add("screen.temporature.config_sync.no_changes", "No differences — configs already match.");
+        translate.add("screen.temporature.config_sync.accept", "Accept");
+        translate.add("screen.temporature.config_sync.deny", "Deny");
+        translate.add("screen.temporature.config_sync.denied", "You denied the server config sync.");
     }
 
     private void generateConfig(TranslationBuilder translate) {
@@ -31,6 +40,7 @@ public class TemporatureLanguageProvider extends FabricLanguageProvider {
 
         // Main title
         translate.add(cfg + "title", "Temporature Configuration");
+        translate.add(cfg + "server_locked", "This setting is controlled by the server and cannot be changed while connected");
 
         // ── Temperature Category ──
         translate.add(cfg + "category.temperature", "Temperature");

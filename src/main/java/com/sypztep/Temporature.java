@@ -4,10 +4,14 @@ import com.sypztep.common.data.BiomeTemperatureData;
 import com.sypztep.common.data.BlockTemperatureData;
 import com.sypztep.common.data.DimensionTemperatureData;
 import com.sypztep.common.data.StructureTemperatureData;
+import com.sypztep.common.network.ConfigSyncPayloadS2C;
+import com.sypztep.config.TemporatureServerConfig;
 import com.sypztep.plateau.common.api.PlateauDamageTypes;
 import com.sypztep.system.temperature.TemperatureLayerRegistry;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.registry.DynamicRegistries;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -38,11 +42,17 @@ public class Temporature implements ModInitializer {
 	}
 	@Override
 	public void onInitialize() {
+		TemporatureServerConfig.HANDLER.load();
+
 		DynamicRegistries.registerSynced(BIOME_TEMPERATURES, BiomeTemperatureData.CODEC);
 		DynamicRegistries.registerSynced(DIMENSION_TEMPERATURES, DimensionTemperatureData.CODEC);
 		DynamicRegistries.registerSynced(STRUCTURE_TEMPERATURES, StructureTemperatureData.CODEC);
 		DynamicRegistries.registerSynced(BLOCK_TEMPERATURES, BlockTemperatureData.CODEC);
 
 		TemperatureLayerRegistry.init();
+
+		PayloadTypeRegistry.clientboundPlay().register(ConfigSyncPayloadS2C.ID, ConfigSyncPayloadS2C.CODEC);
+		ServerPlayConnectionEvents.JOIN.register((handler, _, _) ->
+				ConfigSyncPayloadS2C.send(handler.getPlayer()));
 	}
 }

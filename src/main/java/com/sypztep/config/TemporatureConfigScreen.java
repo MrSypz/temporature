@@ -8,14 +8,18 @@ import net.minecraft.network.chat.Component;
 
 public final class TemporatureConfigScreen {
     public static Screen buildScreen(Screen screen) {
-        boolean tempEnabled = TemporatureServerConfig.getInstance().enableTemperatureSystem;
+        boolean synced = TemporatureServerConfig.isSyncedFromServer();
+        boolean tempEnabled = !synced && TemporatureServerConfig.getInstance().enableTemperatureSystem;
 
         // =========================================================
         // CORE TEMPERATURE OPTIONS
         // =========================================================
         Option<Boolean> tempEnableOpt = Option.<Boolean>createBuilder()
+                .available(!synced)
                 .name(Component.translatable("config.temporature.temperature.enable"))
-                .description(OptionDescription.of(Component.translatable("config.temporature.temperature.enable.description")))
+                .description(OptionDescription.of(Component.translatable(synced
+                        ? "config.temporature.server_locked"
+                        : "config.temporature.temperature.enable.description")))
                 .binding(true, () -> TemporatureServerConfig.getInstance().enableTemperatureSystem,
                         newVal -> TemporatureServerConfig.getInstance().enableTemperatureSystem = newVal)
                 .controller(TickBoxControllerBuilder::create)
