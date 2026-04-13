@@ -9,7 +9,7 @@ import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-@Mixin(value = Gui.HeartType.class, priority = 1000)
+@Mixin(Gui.HeartType.class)
 public class GuiMixin {
     @ModifyExpressionValue(
             method = "forPlayer",
