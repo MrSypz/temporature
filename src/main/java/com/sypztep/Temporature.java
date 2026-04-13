@@ -52,7 +52,9 @@ public class Temporature implements ModInitializer {
 		TemperatureLayerRegistry.init();
 
 		PayloadTypeRegistry.clientboundPlay().register(ConfigSyncPayloadS2C.ID, ConfigSyncPayloadS2C.CODEC);
-		ServerPlayConnectionEvents.JOIN.register((handler, _, _) ->
-				ConfigSyncPayloadS2C.send(handler.getPlayer()));
+		ServerPlayConnectionEvents.JOIN.register((handler, _, server) -> {
+			if (server.isDedicatedServer())
+				ConfigSyncPayloadS2C.send(handler.getPlayer());
+		});
 	}
 }

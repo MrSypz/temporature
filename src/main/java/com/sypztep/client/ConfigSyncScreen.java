@@ -8,6 +8,7 @@ import com.sypztep.plateau.client.v1.ui.theme.UITheme;
 import com.sypztep.plateau.client.v1.ui.widget.UIButton;
 import com.sypztep.plateau.client.v1.ui.widget.UILabel;
 import com.sypztep.plateau.client.v1.ui.widget.UIScrollPanel;
+import com.sypztep.plateau.client.v1.ui.widget.UIText;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.ChatFormatting;
@@ -40,17 +41,18 @@ public class ConfigSyncScreen extends PlateauScreen {
         int bottomMargin = 10;
         int btnY = height - bottomMargin - btnH;
 
-        // Description label
+        // Description text (word-wrapped)
         int descY = 8;
-        UILabel desc = new UILabel(panelX, descY, panelW,
-                Component.translatable("screen.temporature.config_sync.description")).setCentered(true);
+        Component descText = Component.translatable("screen.temporature.config_sync.description");
+        int descH = font.split(descText, panelW).size() * (font.lineHeight + 2);
+        UIText desc = new UIText(panelX, descY, panelW, descText).setCentered(true);
         addRenderableOnly(desc);
 
         // Hash display
-        int hashY = descY + desc.getHeight() + 4;
+        int hashY = descY + descH + 4;
         UILabel hashLabel = new UILabel(panelX, hashY, panelW,
                 Component.translatable("screen.temporature.config_sync.hash",
-                        Integer.toHexString(serverHash))).setCentered(true);
+                        Integer.toHexString(serverHash))).setColor(0xFFB0E4CC).setCentered(true);
         addRenderableOnly(hashLabel);
 
         // Diff scroll panel — only changed fields
@@ -81,7 +83,7 @@ public class ConfigSyncScreen extends PlateauScreen {
                             .withStyle(ChatFormatting.GRAY)
                             .append(Component.literal(String.valueOf(diff.clientVal))
                                     .withStyle(ChatFormatting.RED))
-                            .append(Component.literal(" \u2192 ")
+                            .append(Component.literal(" → ")
                                     .withStyle(ChatFormatting.DARK_GRAY))
                             .append(Component.literal(String.valueOf(diff.serverVal))
                                     .withStyle(ChatFormatting.GREEN));
@@ -99,7 +101,7 @@ public class ConfigSyncScreen extends PlateauScreen {
         int btnW = (panelW - 6) / 2;
         UIButton acceptBtn = new UIButton(0, 0, btnW, btnH,
                 Component.translatable("screen.temporature.config_sync.accept"),
-                btn -> {
+                _ -> {
                     TemporatureServerConfig.applyFrom(serverCfg);
                     TemporatureServerConfig.setSyncedFromServer(true);
                     onClose();
@@ -107,8 +109,8 @@ public class ConfigSyncScreen extends PlateauScreen {
 
         UIButton denyBtn = new UIButton(0, 0, btnW, btnH,
                 Component.translatable("screen.temporature.config_sync.deny"),
-                btn -> {
-                    if (minecraft != null && minecraft.getConnection() != null) {
+                _ -> {
+                    if (minecraft.getConnection() != null) {
                         minecraft.getConnection().getConnection().disconnect(
                                 Component.translatable("screen.temporature.config_sync.denied"));
                     }
@@ -125,6 +127,11 @@ public class ConfigSyncScreen extends PlateauScreen {
 
     @Override
     public boolean isPauseScreen() {
+        return false;
+    }
+
+    @Override
+    public boolean shouldCloseOnEsc() {
         return false;
     }
 

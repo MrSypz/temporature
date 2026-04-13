@@ -41,8 +41,10 @@ public record ConfigSyncPayloadS2C(String json, int hash) implements CustomPacke
                 Temporature.LOGGER.warn("Config sync hash mismatch — packet corrupted?");
                 return;
             }
-            if (TemporatureServerConfig.isSyncedFromServer()
-                    && serverCfg.hashCode() == TemporatureServerConfig.getInstance().hashCode()) {
+            if (serverCfg.hashCode() == TemporatureServerConfig.getInstance().hashCode()) {
+                if (!TemporatureServerConfig.isSyncedFromServer())
+                    TemporatureServerConfig.setSyncedFromServer(true);
+
                 return;
             }
             Minecraft.getInstance().execute(() ->
