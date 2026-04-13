@@ -3,6 +3,7 @@ package com.sypztep.client;
 import com.sypztep.Temporature;
 import com.sypztep.config.TemporatureClientConfig;
 import com.sypztep.common.TemperatureEntityComponents;
+import com.sypztep.config.TemporatureServerConfig;
 import com.sypztep.system.temperature.TemperatureHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -34,6 +35,8 @@ public final class WorldGaugeHudRenderer implements HudElement {
 
     @Override
     public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, @NonNull DeltaTracker deltaTracker) {
+        TemporatureServerConfig serverConfig = TemporatureServerConfig.getInstance();
+        if (!serverConfig.enableTemperatureSystem) return;
         TemporatureClientConfig clientConfig = TemporatureClientConfig.getInstance();
         if (!clientConfig.showWorldGauge) return;
 
