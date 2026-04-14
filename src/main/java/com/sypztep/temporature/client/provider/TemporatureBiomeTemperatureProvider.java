@@ -52,7 +52,7 @@ public class TemporatureBiomeTemperatureProvider extends FabricDynamicRegistryPr
         add(entries, "savanna", fToMc(48), fToMc(84),
                 Biomes.SAVANNA, Biomes.SAVANNA_PLATEAU, Biomes.WINDSWEPT_SAVANNA);
 
-        add(entries, "jungle", fToMc(76), fToMc(89),
+        add(entries, "jungle", fToMc(76), fToMc(89), cToMc(24),
                 Biomes.JUNGLE, Biomes.SPARSE_JUNGLE, Biomes.BAMBOO_JUNGLE);
 
         add(entries, "plains", fToMc(32), fToMc(72),
@@ -62,7 +62,7 @@ public class TemporatureBiomeTemperatureProvider extends FabricDynamicRegistryPr
                 Biomes.FOREST, Biomes.FLOWER_FOREST, Biomes.BIRCH_FOREST, Biomes.OLD_GROWTH_BIRCH_FOREST,
                 Biomes.DARK_FOREST, Biomes.PALE_GARDEN);
 
-        add(entries, "swamp", fToMc(48), fToMc(72),
+        add(entries, "swamp", fToMc(48), fToMc(72), cToMc(17.5),
                 Biomes.SWAMP, Biomes.MANGROVE_SWAMP);
 
         add(entries, "cherry", cToMc(-2), cToMc(18),
@@ -85,13 +85,13 @@ public class TemporatureBiomeTemperatureProvider extends FabricDynamicRegistryPr
         add(entries, "frozen_ocean", fToMc(12), fToMc(31),
                 Biomes.FROZEN_OCEAN, Biomes.DEEP_FROZEN_OCEAN, Biomes.FROZEN_RIVER);
 
-        add(entries, "cold_ocean", fToMc(25), fToMc(42),
+        add(entries, "cold_ocean", fToMc(25), fToMc(42), cToMc(8.75),
                 Biomes.COLD_OCEAN, Biomes.DEEP_COLD_OCEAN);
 
         add(entries, "ocean", fToMc(40), fToMc(60),
                 Biomes.OCEAN, Biomes.DEEP_OCEAN, Biomes.RIVER);
 
-        add(entries, "warm_ocean", fToMc(67), fToMc(76),
+        add(entries, "warm_ocean", fToMc(67), fToMc(76), cToMc(27.5),
                 Biomes.WARM_OCEAN, Biomes.LUKEWARM_OCEAN, Biomes.DEEP_LUKEWARM_OCEAN);
 
         add(entries, "beach", fToMc(40), fToMc(70),

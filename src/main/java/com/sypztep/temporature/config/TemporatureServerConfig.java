@@ -39,6 +39,12 @@ public final class TemporatureServerConfig {
         dst.hotDryBonus = src.hotDryBonus;
         dst.coldDryMultiplier = src.coldDryMultiplier;
         dst.defaultWaterTemp = src.defaultWaterTemp;
+        dst.waterTempBiomeFactor = src.waterTempBiomeFactor;
+        dst.waterTempOffset = src.waterTempOffset;
+        dst.residualWaterDriftRate = src.residualWaterDriftRate;
+        dst.rainWaterTempFactor = src.rainWaterTempFactor;
+        dst.maxWaterDepth = src.maxWaterDepth;
+        dst.deepWaterTemp = src.deepWaterTemp;
         dst.enableAdaptation = src.enableAdaptation;
         dst.adaptRate = src.adaptRate;
         dst.maxAdaptShift = src.maxAdaptShift;
@@ -86,7 +92,7 @@ public final class TemporatureServerConfig {
     public float rainSoakSpeed = 0.005f;
 
     @SerialEntry
-    public float maxRainWetness = 1.0f;
+    public float maxRainWetness = 0.6f;
 
     @SerialEntry
     public float dryRate = 0.0008f;
@@ -99,6 +105,24 @@ public final class TemporatureServerConfig {
 
     @SerialEntry
     public double defaultWaterTemp = -0.93;
+
+    @SerialEntry
+    public float waterTempBiomeFactor = 0.7f;
+
+    @SerialEntry
+    public float waterTempOffset = 0.0f;
+
+    @SerialEntry
+    public float residualWaterDriftRate = 0.0004f;
+
+    @SerialEntry
+    public float rainWaterTempFactor = 0.8f;
+
+    @SerialEntry
+    public int maxWaterDepth = 30;
+
+    @SerialEntry
+    public double deepWaterTemp = 0.16;
 
     // --- Adaptation ---
 
@@ -125,6 +149,8 @@ public final class TemporatureServerConfig {
                 tempRate, tempDamageInterval, tempBaseDamage, blockScanRadius,
                 waterSoakSpeed, rainSoakSpeed, maxRainWetness,
                 dryRate, hotDryBonus, coldDryMultiplier, defaultWaterTemp,
+                waterTempBiomeFactor, waterTempOffset, residualWaterDriftRate, rainWaterTempFactor,
+                maxWaterDepth, deepWaterTemp,
                 enableAdaptation, adaptRate, maxAdaptShift, adaptStrength, threshHoldExtreme
         );
     }

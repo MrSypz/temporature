@@ -24,5 +24,8 @@ public final class TemporatureClientConfig {
     public boolean showWorldGauge = true;
 
     @SerialEntry
+    public boolean worldGaugeMeterSound = true;
+
+    @SerialEntry
     public TemperatureUnit temperatureUnit = TemperatureUnit.CELSIUS;
 }

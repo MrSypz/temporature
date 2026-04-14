@@ -80,7 +80,20 @@ public class TemporatureLanguageProvider extends FabricLanguageProvider {
         translate.add(cfg + "wetness.cold_dry_multiplier", "Cold Dry Multiplier");
         translate.add(cfg + "wetness.cold_dry_multiplier.description", "Multiplier on drying speed when body temperature is below the hypothermia threshold. Lower values = slower drying in cold");
         translate.add(cfg + "wetness.default_water_temp", "Default Water Temperature");
-        translate.add(cfg + "wetness.default_water_temp.description", "Fallback water temperature offset in MC units, used when a biome does not define its own waterTemp. Negative values cool the player (default: -23.3\u00B0C = -0.93 MC)");
+        translate.add(cfg + "wetness.default_water_temp.description", "Ultimate fallback water temperature offset in MC units, used only when a biome isn't registered at all. Most biomes use the formula below instead. Negative values cool the player (default: -23.3\u00B0C = -0.93 MC)");
+
+        translate.add(cfg + "water.biome_factor", "Water Biome Factor");
+        translate.add(cfg + "water.biome_factor.description", "Multiplier on biome midpoint used to derive water temperature for biomes without an explicit override. Lower = water is more muted vs. air; higher = water tracks air temperature more closely (default: 0.7)");
+        translate.add(cfg + "water.offset", "Water Temperature Offset");
+        translate.add(cfg + "water.offset.description", "Flat bias added to derived water temperature in MC units. Use negative values to make all water slightly colder than the formula suggests (default: 0)");
+        translate.add(cfg + "water.residual_drift", "Residual Water Drift Rate");
+        translate.add(cfg + "water.residual_drift.description", "How fast water clinging to a wet player drifts toward ambient world temperature per tick. Higher = residual water loses its origin temperature faster. Hot bodies drift faster, cold bodies drift slower (default: 0.0004)");
+        translate.add(cfg + "water.rain_factor", "Rain Water Temperature Factor");
+        translate.add(cfg + "water.rain_factor.description", "Multiplier on biome midpoint for rain water temperature. Rain is condensed atmospheric water, typically closer to air temperature than standing water in the same biome (default: 0.8)");
+        translate.add(cfg + "water.max_depth", "Max Water Depth");
+        translate.add(cfg + "water.max_depth.description", "Maximum depth in blocks scanned above the player to gauge how deep the surrounding water is. Deeper water pulls the felt water temperature toward the deep-water value, simulating poor heat conduction at depth (default: 30)");
+        translate.add(cfg + "water.deep_temp", "Deep Water Temperature");
+        translate.add(cfg + "water.deep_temp.description", "Absolute water temperature in MC units felt at maximum depth, regardless of biome. Deep water behaves like a cold sink — the player's depth linearly blends biome surface water temp toward this value (default: 0.16 = ~4\u00B0C)");
 
         // ── Adaptation group ──
         translate.add(cfg + "adaptation.group", "Biome Adaptation");
@@ -103,6 +116,8 @@ public class TemporatureLanguageProvider extends FabricLanguageProvider {
         translate.add(cfg + "client.display.description", "Controls for HUD elements and visual preferences");
         translate.add(cfg + "client.show_world_gauge", "Show World Gauge");
         translate.add(cfg + "client.show_world_gauge.description", "Toggle the world temperature gauge on the HUD");
+        translate.add(cfg + "client.world_gauge_meter_sound", "World Gauge Tick Sound");
+        translate.add(cfg + "client.world_gauge_meter_sound.description", "Play a soft tick as the gauge indicator crosses each 0.1\u00B0C mark. Immersive UX cue — rising pitch for warming, lower pitch for cooling");
         translate.add(cfg + "client.temperature_unit", "Temperature Unit");
         translate.add(cfg + "client.temperature_unit.description", "Unit used for temperature display on the HUD");
         translate.add(cfg + "client.unit.celsius", "Celsius (°C)");

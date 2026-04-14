@@ -7,12 +7,16 @@ import com.sypztep.temporature.api.TemporatureApi;
 import com.sypztep.plateau.common.api.PlateauDamageTypes;
 import com.sypztep.temporature.system.temperature.TemperatureHelper;
 import com.sypztep.temporature.system.temperature.WorldHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.ladysnake.cca.api.v3.component.sync.AutoSyncedComponent;
@@ -199,7 +203,8 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
 
     @Override
     public void clientTick() {
-        if (wetness > 0 && !player.isInWater() && !player.isSpectator()) {
+        if (wetness <= 0 || player.isInWater() || player.isSpectator()) return;
+        if (!(player == Minecraft.getInstance().player) || Minecraft.getInstance().gameRenderer.getMainCamera().isDetached())
             if (player.getRandom().nextFloat() < wetness) {
                 double rx = player.getBbWidth() * (player.getRandom().nextDouble() - 0.5);
                 double ry = player.getBbHeight() * player.getRandom().nextDouble();
@@ -207,9 +212,8 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
 
                 player.level().addParticle(ParticleTypes.FALLING_WATER,
                         player.getX() + rx, player.getY() + ry, player.getZ() + rz,
-                        0,0,0);
+                        0, 0, 0);
             }
-        }
     }
     private void tickAdaptation() {
         if (player.isCreative() || player.isSpectator()) return;
@@ -314,9 +318,14 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
         boolean inWater = player.isInWater() || player.isUnderWater();
         boolean inRain = !inWater && player.level().isRainingAt(player.blockPosition());
 
+        // How much of the player's hitbox is actually in water (0 = tip-toe / none, 1 = head underwater).
+        // Scales both wetness growth and the water-temp chase rate so a toe in a puddle barely soaks,
+        // while fully submerged behaves exactly as before.
+        float submersion = inWater ? computeSubmersion(player) : 0f;
+
         // --- Wetness scalar (0-1) ---
         if (inWater) {
-            wetness = Math.min(1f, wetness + config.waterSoakSpeed);
+            wetness = Math.min(1f, wetness + config.waterSoakSpeed * submersion);
         } else if (inRain) {
             wetness = Math.min(config.maxRainWetness, wetness + config.rainSoakSpeed);
         } else {
@@ -327,20 +336,22 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
             wetness = Math.max(0f, wetness - dry);
         }
 
-        // --- Water temp accumulator (MC units) — Cold Sweat style ---
-        // Ramps toward biome-specific waterTemp (falls back to config default).
-        // Negative = cooling offset. Shrinks toward 0 while drying.
-        double biomeWaterTemp = WorldHelper.getWaterTemp(
-                player.level(), player.level().getBiome(player.blockPosition()),
-                config.defaultWaterTemp);
+        // --- Water temp accumulator (MC units) ---
+        // Ramps toward biome-specific waterTemp when submerged (depth-adjusted toward deep cold),
+        // or rain-specific temp in rain. When neither, drifts toward ambient worldTemp.
+        Holder<Biome> biome = player.level().getBiome(player.blockPosition());
+        double biomeWaterTemp = WorldHelper.getWaterTemp(player.level(), biome, config.defaultWaterTemp);
 
         double target;
         float soakRate;
         if (inWater) {
-            target = biomeWaterTemp;
-            soakRate = config.waterSoakSpeed;
+            int depth = computeWaterDepth(player, config.maxWaterDepth);
+            double depthT = Math.min(depth / (double) config.maxWaterDepth, 1.0);
+            // Surface = biome water. Deep = universal cold (poor heat conduction + thermocline)
+            target = biomeWaterTemp + (config.deepWaterTemp - biomeWaterTemp) * depthT;
+            soakRate = config.waterSoakSpeed * submersion;
         } else if (inRain) {
-            target = biomeWaterTemp;
+            target = WorldHelper.getRainWaterTemp(player.level(), biome);
             soakRate = config.rainSoakSpeed;
         } else {
             target = 0;
@@ -364,6 +375,15 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
             waterTempAccum = shrink(waterTempAccum, dry * 5f);
         }
 
+        // Residual water drifts toward ambient worldTemp (water on skin reaches air temp over time)
+        if (!inWater && !inRain && wetness > 0 && waterTempAccum != 0) {
+            float driftRate = config.residualWaterDriftRate;
+            float core = coreTemp + baseOffset;
+            if (core > TemperatureHelper.WARM_DEV) driftRate *= (1f + core / 100f);
+            else if (core < TemperatureHelper.HYPOTHERMIA_DEV) driftRate *= config.coldDryMultiplier;
+            waterTempAccum += (worldTemp - waterTempAccum) * driftRate;
+        }
+
         // Fire interaction: evaporate water and clear fire
         if (player.level() instanceof ServerLevel && player.isOnFire()) {
             waterTempAccum = shrink(waterTempAccum, 0.1f);
@@ -375,6 +395,36 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
 
         // Zero out accumulator when fully dry
         if (wetness <= 0) waterTempAccum = 0;
+    }
+
+    /**
+     * Counts water blocks above the player's position up to the surface.
+     * A player swimming at the surface returns ~1; a player at the bottom of a 20-block pool returns ~20.
+     * Capped at {@code maxDepth} to bound cost.
+     * <p>
+     * Returns 0..1 representing how much of the player's hitbox is filled with water.
+     * 0 = dry / toe-tip in nothing, ~0.3 = knees, ~0.5 = waist, 1.0 = head underwater.
+     * Uses Minecraft's own {@code getFluidHeight} which is already the per-entity
+     * AABB integration it uses for buoyancy — no extra block scanning needed.
+     */
+    public static float computeSubmersion(Player player) {
+        float bbH = player.getBbHeight();
+        if (bbH <= 0) return 0f;
+        double fluidH = player.getFluidHeight(FluidTags.WATER);
+        return (float) Math.min(fluidH / bbH, 1.0);
+    }
+
+    public static int computeWaterDepth(Player player, int maxDepth) {
+        Level level = player.level();
+        BlockPos origin = player.blockPosition();
+        int depth = 0;
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        for (int dy = 0; dy < maxDepth; dy++) {
+            cursor.set(origin.getX(), origin.getY() + dy, origin.getZ());
+            if (!level.getFluidState(cursor).is(FluidTags.WATER)) break;
+            depth++;
+        }
+        return depth;
     }
 
     /**

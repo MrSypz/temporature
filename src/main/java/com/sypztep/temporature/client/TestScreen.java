@@ -96,9 +96,61 @@ public class TestScreen extends Screen {
 
         // ── WETNESS ──
         int wetPct = Math.round(displayedWetness * 100);
-        String wetLine = "§7Wetness: §f" + wetPct + "%";
+        float accum = tempComp.getWaterTempAccum();
+        double accumC = TemperatureHelper.mcToC(accum);
+        String wetLine = String.format("§7Wetness: §f%d%% §7(skin: §f%.1fC§7)", wetPct, accumC);
 
         g.text(font, wetLine, cx, cy, 0xFFFFFFFF, true);
+
+        if (mouseX >= cx && mouseX < cx + cw && mouseY >= cy && mouseY < cy + ROW_H) {
+            TemporatureServerConfig wcfg = TemporatureServerConfig.getInstance();
+            boolean inWater = minecraft.player.isInWater() || minecraft.player.isUnderWater();
+            boolean inRain = !inWater && minecraft.player.level().isRainingAt(minecraft.player.blockPosition());
+            Holder<Biome> wBiome = minecraft.player.level().getBiome(minecraft.player.blockPosition());
+
+            java.util.ArrayList<Component> lines = new java.util.ArrayList<>();
+            lines.add(Component.literal("§bWater & Wetness"));
+            lines.add(Component.literal(String.format("§7Accum: §f%.3f MC §7(%.1fC)", accum, accumC)));
+
+            String stateLine = inWater ? "§9Submerged" : inRain ? "§3In rain" : (targetWetness > 0 ? "§7Drying (residual)" : "§8Dry");
+            lines.add(Component.literal("§7State: " + stateLine));
+
+            if (inWater) {
+                float submersion = PlayerTemperatureComponent.computeSubmersion(minecraft.player);
+                String bodyPart = submersion >= 0.95f ? "§9fully submerged"
+                        : submersion >= 0.7f ? "§bshoulders"
+                        : submersion >= 0.45f ? "§bwaist"
+                        : submersion >= 0.2f ? "§3knees"
+                        : "§3tip-toe";
+                int depth = PlayerTemperatureComponent.computeWaterDepth(minecraft.player, wcfg.maxWaterDepth);
+                double depthT = Math.min(depth / (double) wcfg.maxWaterDepth, 1.0);
+                double biomeWater = WorldHelper.getWaterTemp(minecraft.player.level(), wBiome, wcfg.defaultWaterTemp);
+                double target = biomeWater + (wcfg.deepWaterTemp - biomeWater) * depthT;
+                double fluidH = minecraft.player.getFluidHeight(net.minecraft.tags.FluidTags.WATER);
+                float bbH = minecraft.player.getBbHeight();
+                lines.add(Component.literal(String.format("§7Submersion: §f%.0f%% %s §8(%.2f/%.2f bb)", submersion * 100, bodyPart, fluidH, bbH)));
+                lines.add(Component.literal(String.format("§7Depth: §f%d §7/ %d §8(%.0f%%)", depth, wcfg.maxWaterDepth, depthT * 100)));
+                lines.add(Component.literal(String.format("§7Surface water: §f%.2f MC §7(%.1fC)", biomeWater, TemperatureHelper.mcToC(biomeWater))));
+                lines.add(Component.literal(String.format("§7Deep water: §f%.2f MC §7(%.1fC)", wcfg.deepWaterTemp, TemperatureHelper.mcToC(wcfg.deepWaterTemp))));
+                lines.add(Component.literal(String.format("§7Target: §f%.2f MC §7(%.1fC)", target, TemperatureHelper.mcToC(target))));
+                lines.add(Component.literal(String.format("§7Soak rate: §f%.5f/tick §8(%.4f x %.0f%%)", wcfg.waterSoakSpeed * submersion, wcfg.waterSoakSpeed, submersion * 100)));
+            } else if (inRain) {
+                double rainT = WorldHelper.getRainWaterTemp(minecraft.player.level(), wBiome);
+                lines.add(Component.literal(String.format("§7Rain target: §f%.2f MC §7(%.1fC)", rainT, TemperatureHelper.mcToC(rainT))));
+                lines.add(Component.literal(String.format("§7Rain cap: §f%.0f%%", wcfg.maxRainWetness * 100)));
+                lines.add(Component.literal(String.format("§7Soak rate: §f%.4f/tick", wcfg.rainSoakSpeed)));
+            } else if (targetWetness > 0) {
+                lines.add(Component.literal(String.format("§7Drift toward world: §f%.2f MC", targetWorldT)));
+                lines.add(Component.literal(String.format("§7Drift rate: §f%.4f/tick", wcfg.residualWaterDriftRate)));
+                lines.add(Component.literal(String.format("§7Dry rate: §f%.4f §7(+hot: %.4f)", wcfg.dryRate, wcfg.hotDryBonus)));
+            }
+
+            lines.add(Component.literal(String.format("§8Blended temp: §f%.2f MC", targetWorldT + (accum - targetWorldT) * targetWetness)));
+
+            tooltipLines = lines;
+            tooltipX = mouseX;
+            tooltipY = mouseY;
+        }
 
         cy += ROW_H;
 

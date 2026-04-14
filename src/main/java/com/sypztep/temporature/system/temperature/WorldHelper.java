@@ -2,6 +2,7 @@ package com.sypztep.temporature.system.temperature;
 
 import com.sypztep.temporature.Temporature;
 import com.sypztep.temporature.common.data.BiomeTemperatureData;
+import com.sypztep.temporature.config.TemporatureServerConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
@@ -37,17 +38,36 @@ public final class WorldHelper {
     }
 
     /**
-     * Returns the biome-specific water temperature if defined in the datapack,
-     * otherwise falls back to the given default (typically from config).
+     * Returns the biome-specific water temperature.
+     * <p>
+     * Priority:
+     * 1. Explicit {@code waterTemp} on {@link BiomeTemperatureData} (authored override).
+     * 2. Formula derived from the biome's own low/high temps, using
+     *    {@code waterTempBiomeFactor} and {@code waterTempOffset} from config.
+     * 3. The given {@code fallback} if the biome isn't registered at all.
      */
     public static double getWaterTemp(Level level, Holder<Biome> biomeHolder, double fallback) {
         Registry<BiomeTemperatureData> reg = level.registryAccess().lookupOrThrow(Temporature.BIOME_TEMPERATURES);
         for (BiomeTemperatureData entry : reg) {
             if (entry.biomes().contains(biomeHolder)) {
-                return entry.waterTemp().orElse(fallback);
+                if (entry.waterTemp().isPresent()) return entry.waterTemp().get();
+                TemporatureServerConfig cfg = TemporatureServerConfig.getInstance();
+                double midpoint = (entry.lowTemp() + entry.highTemp()) * 0.5;
+                return midpoint * cfg.waterTempBiomeFactor + cfg.waterTempOffset;
             }
         }
         return fallback;
+    }
+
+    /**
+     * Returns rain water temperature for the given biome — typically warmer/closer to air
+     * than standing water, since rain is condensed atmospheric moisture.
+     */
+    public static double getRainWaterTemp(Level level, Holder<Biome> biomeHolder) {
+        TemporatureServerConfig cfg = TemporatureServerConfig.getInstance();
+        BiomeTemp bt = getBiomeTemperature(level, biomeHolder);
+        double midpoint = (bt.lowTemp() + bt.highTemp()) * 0.5;
+        return midpoint * cfg.rainWaterTempFactor;
     }
 
     public static double fallbackBiomeBase(float base) {

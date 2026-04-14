@@ -145,6 +145,60 @@ public final class TemporatureConfigScreen {
                 .controller(opt -> DoubleSliderControllerBuilder.create(opt).range(-1.0, 1.0).step(0.02))
                 .build();
 
+        Option<Float> waterTempBiomeFactorOpt = Option.<Float>createBuilder()
+                .available(tempEnabled)
+                .name(Component.translatable("config.temporature.water.biome_factor"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.water.biome_factor.description")))
+                .binding(0.7f, () -> TemporatureServerConfig.getInstance().waterTempBiomeFactor,
+                        newVal -> TemporatureServerConfig.getInstance().waterTempBiomeFactor = newVal)
+                .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0.3f, 1.0f).step(0.05f))
+                .build();
+
+        Option<Float> waterTempOffsetOpt = Option.<Float>createBuilder()
+                .available(tempEnabled)
+                .name(Component.translatable("config.temporature.water.offset"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.water.offset.description")))
+                .binding(0.0f, () -> TemporatureServerConfig.getInstance().waterTempOffset,
+                        newVal -> TemporatureServerConfig.getInstance().waterTempOffset = newVal)
+                .controller(opt -> FloatSliderControllerBuilder.create(opt).range(-0.3f, 0.3f).step(0.02f))
+                .build();
+
+        Option<Float> residualWaterDriftRateOpt = Option.<Float>createBuilder()
+                .available(tempEnabled)
+                .name(Component.translatable("config.temporature.water.residual_drift"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.water.residual_drift.description")))
+                .binding(0.0004f, () -> TemporatureServerConfig.getInstance().residualWaterDriftRate,
+                        newVal -> TemporatureServerConfig.getInstance().residualWaterDriftRate = newVal)
+                .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0.0001f, 0.002f).step(0.0001f))
+                .build();
+
+        Option<Float> rainWaterTempFactorOpt = Option.<Float>createBuilder()
+                .available(tempEnabled)
+                .name(Component.translatable("config.temporature.water.rain_factor"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.water.rain_factor.description")))
+                .binding(0.8f, () -> TemporatureServerConfig.getInstance().rainWaterTempFactor,
+                        newVal -> TemporatureServerConfig.getInstance().rainWaterTempFactor = newVal)
+                .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0.4f, 1.0f).step(0.05f))
+                .build();
+
+        Option<Integer> maxWaterDepthOpt = Option.<Integer>createBuilder()
+                .available(tempEnabled)
+                .name(Component.translatable("config.temporature.water.max_depth"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.water.max_depth.description")))
+                .binding(30, () -> TemporatureServerConfig.getInstance().maxWaterDepth,
+                        newVal -> TemporatureServerConfig.getInstance().maxWaterDepth = newVal)
+                .controller(opt -> IntegerSliderControllerBuilder.create(opt).range(5, 60).step(1))
+                .build();
+
+        Option<Double> deepWaterTempOpt = Option.<Double>createBuilder()
+                .available(tempEnabled)
+                .name(Component.translatable("config.temporature.water.deep_temp"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.water.deep_temp.description")))
+                .binding(0.16, () -> TemporatureServerConfig.getInstance().deepWaterTemp,
+                        newVal -> TemporatureServerConfig.getInstance().deepWaterTemp = newVal)
+                .controller(opt -> DoubleSliderControllerBuilder.create(opt).range(-0.5, 1.0).step(0.02))
+                .build();
+
         // =========================================================
         // ADAPTATION OPTIONS
         // =========================================================
@@ -218,6 +272,14 @@ public final class TemporatureConfigScreen {
                 .controller(TickBoxControllerBuilder::create)
                 .build();
 
+        Option<Boolean> worldGaugeMeterSoundOpt = Option.<Boolean>createBuilder()
+                .name(Component.translatable("config.temporature.client.world_gauge_meter_sound"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.client.world_gauge_meter_sound.description")))
+                .binding(true, () -> TemporatureClientConfig.getInstance().worldGaugeMeterSound,
+                        newVal -> TemporatureClientConfig.getInstance().worldGaugeMeterSound = newVal)
+                .controller(TickBoxControllerBuilder::create)
+                .build();
+
         Option<TemperatureUnit> temperatureUnitOpt = Option.<TemperatureUnit>createBuilder()
                 .name(Component.translatable("config.temporature.client.temperature_unit"))
                 .description(OptionDescription.of(Component.translatable("config.temporature.client.temperature_unit.description")))
@@ -249,6 +311,12 @@ public final class TemporatureConfigScreen {
                 hotDryBonusOpt.setAvailable(enable);
                 coldDryMultiplierOpt.setAvailable(enable);
                 defaultWaterTempOpt.setAvailable(enable);
+                waterTempBiomeFactorOpt.setAvailable(enable);
+                waterTempOffsetOpt.setAvailable(enable);
+                residualWaterDriftRateOpt.setAvailable(enable);
+                rainWaterTempFactorOpt.setAvailable(enable);
+                maxWaterDepthOpt.setAvailable(enable);
+                deepWaterTempOpt.setAvailable(enable);
             }
         });
 
@@ -282,6 +350,12 @@ public final class TemporatureConfigScreen {
                                 .option(hotDryBonusOpt)
                                 .option(coldDryMultiplierOpt)
                                 .option(defaultWaterTempOpt)
+                                .option(waterTempBiomeFactorOpt)
+                                .option(waterTempOffsetOpt)
+                                .option(residualWaterDriftRateOpt)
+                                .option(rainWaterTempFactorOpt)
+                                .option(maxWaterDepthOpt)
+                                .option(deepWaterTempOpt)
                                 .build())
                         .group(OptionGroup.createBuilder()
                                 .name(Component.translatable("config.temporature.adaptation.group"))
@@ -300,6 +374,7 @@ public final class TemporatureConfigScreen {
                                 .name(Component.translatable("config.temporature.client.display"))
                                 .description(OptionDescription.of(Component.translatable("config.temporature.client.display.description")))
                                 .option(showWorldGaugeOpt)
+                                .option(worldGaugeMeterSoundOpt)
                                 .option(temperatureUnitOpt)
                                 .build())
                         .build())

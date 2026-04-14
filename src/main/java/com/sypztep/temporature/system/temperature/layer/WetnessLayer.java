@@ -6,12 +6,15 @@ import com.sypztep.temporature.system.temperature.WorldTemperatureLayer;
 import net.minecraft.world.entity.player.Player;
 
 /**
- * Applies the accumulated water temperature offset to worldTemp.
+ * Blends ambient worldTemp with the player's water temperature accumulator
+ * based on how wet the player is.
  * <p>
- * The accumulator in {@link PlayerTemperatureComponent} gradually ramps toward
- * the global {@code defaultWaterTemp} config value while submerged and decays
- * while drying — matching Cold Sweat's behavior where water always applies
- * a uniform cooling offset regardless of biome.
+ * Fully wet ({@code wetness = 1}) → player feels the water's temperature entirely.
+ * Dry → worldTemp unchanged.
+ * Partial → linear blend between ambient air and water temp.
+ * <p>
+ * Water temperature stored in {@code waterTempAccum} is an absolute MC value
+ * (biome-specific, depth-adjusted), not a delta.
  */
 public final class WetnessLayer implements WorldTemperatureLayer {
     @Override public boolean playerSpecific() { return true; }
@@ -19,9 +22,10 @@ public final class WetnessLayer implements WorldTemperatureLayer {
     @Override
     public double modify(Player player, double currentTemp) {
         PlayerTemperatureComponent comp = TemperatureEntityComponents.PLAYER_TEMPERATURE.get(player);
-        float accum = comp.getWaterTempAccum();
-        if (accum == 0 && comp.getWetness() <= 0) return currentTemp;
+        float wetness = comp.getWetness();
+        if (wetness <= 0) return currentTemp;
 
-        return currentTemp + accum;
+        float accum = comp.getWaterTempAccum();
+        return currentTemp + (accum - currentTemp) * wetness;
     }
 }
