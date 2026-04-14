@@ -324,16 +324,20 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
         float submersion = inWater ? computeSubmersion(player) : 0f;
 
         // --- Wetness scalar (0-1) ---
+        // Only the submerged portion of the body can be wet. If wetness exceeds the current
+        // submersion level (e.g. fully dunked then stood up waist-deep), the above-water
+        // portion dries in air until it equals the submerged fraction.
+        float airDry = computeAirDry(config, coreTemp + baseOffset);
         if (inWater) {
-            wetness = Math.min(1f, wetness + config.waterSoakSpeed * submersion);
+            if (wetness < submersion) {
+                wetness = Math.min(submersion, wetness + config.waterSoakSpeed * submersion);
+            } else if (wetness > submersion) {
+                wetness = Math.max(submersion, wetness - airDry);
+            }
         } else if (inRain) {
             wetness = Math.min(config.maxRainWetness, wetness + config.rainSoakSpeed);
         } else {
-            float core = coreTemp + baseOffset;
-            float dry = config.dryRate;
-            if (core > TemperatureHelper.WARM_DEV) dry += (core / 100f) * config.hotDryBonus;
-            else if (core < TemperatureHelper.HYPOTHERMIA_DEV) dry *= config.coldDryMultiplier;
-            wetness = Math.max(0f, wetness - dry);
+            wetness = Math.max(0f, wetness - airDry);
         }
 
         // --- Water temp accumulator (MC units) ---
@@ -365,14 +369,10 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
             waterTempAccum += (float) step;
         }
 
-        // Dry: shrink accumulator toward 0 proportionally to wetness decay
-        if (!inWater) {
-            float core = coreTemp + baseOffset;
-            float dry = config.dryRate;
-            if (core > TemperatureHelper.WARM_DEV) dry += (core / 100f) * config.hotDryBonus;
-            else if (core < TemperatureHelper.HYPOTHERMIA_DEV) dry *= config.coldDryMultiplier;
-            // Scale dry amount by how much accumulated temp remains
-            waterTempAccum = shrink(waterTempAccum, dry * 5f);
+        // Dry accumulator proportionally to air-dry rate (applies whenever above-water
+        // body surface is exposed — i.e. submersion < 1).
+        if (submersion < 1f) {
+            waterTempAccum = shrink(waterTempAccum, airDry * 5f);
         }
 
         // Residual water drifts toward ambient worldTemp (water on skin reaches air temp over time)
@@ -398,10 +398,16 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
     }
 
     /**
-     * Counts water blocks above the player's position up to the surface.
-     * A player swimming at the surface returns ~1; a player at the bottom of a 20-block pool returns ~20.
-     * Capped at {@code maxDepth} to bound cost.
-     * <p>
+     * Per-tick air-dry rate, temperature-modulated. Hotter bodies dry faster, cold bodies slower.
+     */
+    private static float computeAirDry(TemporatureServerConfig config, float core) {
+        float dry = config.dryRate;
+        if (core > TemperatureHelper.WARM_DEV) dry += (core / 100f) * config.hotDryBonus;
+        else if (core < TemperatureHelper.HYPOTHERMIA_DEV) dry *= config.coldDryMultiplier;
+        return dry;
+    }
+
+    /**
      * Returns 0..1 representing how much of the player's hitbox is filled with water.
      * 0 = dry / toe-tip in nothing, ~0.3 = knees, ~0.5 = waist, 1.0 = head underwater.
      * Uses Minecraft's own {@code getFluidHeight} which is already the per-entity
