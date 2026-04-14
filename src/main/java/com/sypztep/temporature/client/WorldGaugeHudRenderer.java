@@ -1,5 +1,6 @@
 package com.sypztep.temporature.client;
 
+import com.sypztep.plateau.client.v1.ui.core.UISounds;
 import com.sypztep.temporature.Temporature;
 import com.sypztep.temporature.config.TemporatureClientConfig;
 import com.sypztep.temporature.common.TemperatureEntityComponents;
@@ -15,6 +16,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import org.jspecify.annotations.NonNull;
 
@@ -24,14 +26,17 @@ public final class WorldGaugeHudRenderer implements HudElement {
 
     private static final int BORDER_W = 64;
     private static final int BORDER_H = 26;
+    private static final int METER_TEX_W = 80;
+    private static final int METER_TEX_H = 16;
 
-    // Tick layout: 1 px line + 1 px gap = 2 px per 0.1 C  ->  20 px per 1 C
+    // 1 px line + 1 px gap = tick every 2 px -> 20 px per 1 C
     private static final float PX_PER_CELSIUS = 20f;
 
     private float smoothWorldTemp = 0f;
-    private float prevSmoothWorldTemp = 0f;
-    private float displayLeftPx = 0f; // the actual rendered position, lerps toward target
-    private boolean initialized   = false;
+    private float displayLeftPx = 0f;
+    private float lastDelta = 1f;
+    private boolean initialized = false;
+    private int lastU = Integer.MIN_VALUE;
 
     @Override
     public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, @NonNull DeltaTracker deltaTracker) {
@@ -47,15 +52,14 @@ public final class WorldGaugeHudRenderer implements HudElement {
 
         float worldTemp = TemperatureEntityComponents.PLAYER_TEMPERATURE.get(player).getWorldTemp();
         float delta = deltaTracker.getGameTimeDeltaTicks();
-        prevSmoothWorldTemp = smoothWorldTemp;
+        lastDelta = delta;
         if (!initialized) {
             smoothWorldTemp = worldTemp;
-            prevSmoothWorldTemp = worldTemp;
             float initCelsius = (float) TemperatureHelper.mcToC(worldTemp);
             displayLeftPx = initCelsius * PX_PER_CELSIUS - BORDER_W / 2f + 1;
             initialized = true;
         }
-        else smoothWorldTemp = Mth.lerp(Mth.clamp(0.1f * delta, 0.02f, 0.3f), smoothWorldTemp, worldTemp);
+        else smoothWorldTemp = Mth.lerp(Mth.clamp(0.2f * delta, 0.05f, 0.5f), smoothWorldTemp, worldTemp);
 
         int w = graphics.guiWidth(), h = graphics.guiHeight();
         int posX = (w / 2) + 93, posY = h - 19;
@@ -78,41 +82,39 @@ public final class WorldGaugeHudRenderer implements HudElement {
     }
 
     private void renderMeter(GuiGraphicsExtractor graphics, int posX, int posY) {
-
         float tempCelsius = (float) TemperatureHelper.mcToC(smoothWorldTemp);
+        float targetPx = tempCelsius * PX_PER_CELSIUS - BORDER_W / 2f + 1;
 
-        float centerPx = tempCelsius * PX_PER_CELSIUS;
-        float leftPx   = centerPx - BORDER_W / 2f + 1;
+        float alpha = Mth.clamp(0.35f * lastDelta, 0.1f, 0.7f);
+        float prevDisplay = displayLeftPx;
+        displayLeftPx = Mth.lerp(alpha, displayLeftPx, targetPx);
+        if (Math.abs(displayLeftPx - targetPx) < 0.5f) displayLeftPx = targetPx;
 
-        float tempDelta = Math.abs(smoothWorldTemp - prevSmoothWorldTemp);
-        boolean settled = tempDelta < 0.00001f;
-        float targetPx;
-        if (settled) {
-            targetPx = (int) Math.floor(leftPx) | 1;
-        } else {
-            targetPx = leftPx;
-        }
+        // Force odd UV phase so the indicator always lands on a tick, not between.
+        int u = Math.floorMod((int) Math.floor(displayLeftPx), METER_TEX_W) | 1;
 
-        displayLeftPx = Mth.lerp(0.3f, displayLeftPx, targetPx);
-        if (Math.abs(displayLeftPx - targetPx) < 0.01f) displayLeftPx = targetPx;
-        int meterTexW = 80;
-        float u = ((displayLeftPx % meterTexW) + meterTexW) % meterTexW;
+        playTickSound(u, displayLeftPx > prevDisplay, Math.abs(displayLeftPx - targetPx));
+        lastU = u;
 
         int drawn = 0;
         while (drawn < BORDER_W) {
-            int seg = Math.min(Math.round(meterTexW - u), BORDER_W - drawn);
-            if (seg <= 0) { u = 0; continue; }
-
-            int meterTexH = 16;
+            int seg = Math.min(METER_TEX_W - u, BORDER_W - drawn);
             graphics.blit(RenderPipelines.GUI_TEXTURED, WORLD_GAUGE_METER,
                     posX + drawn, posY,
-                    u, 0f,
-                    seg, meterTexH,
-                    meterTexW, meterTexH);
-
+                    (float) u, 0f,
+                    seg, METER_TEX_H,
+                    METER_TEX_W, METER_TEX_H);
             drawn += seg;
             u = 0;
         }
+    }
+
+    private void playTickSound(int u, boolean rising, float distanceToTarget) {
+        if (!TemporatureClientConfig.getInstance().worldGaugeMeterSound) return;
+        if (lastU == Integer.MIN_VALUE || u == lastU) return;
+        // Skip while still sliding — avoids burst on big jumps (dimension change, biome edge).
+        if (distanceToTarget >= 10f) return;
+        UISounds.play(SoundEvents.NOTE_BLOCK_HAT.value(), rising ? 2.0f : 1.4f, 0.05f);
     }
 
     public static void register() {
