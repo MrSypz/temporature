@@ -152,6 +152,11 @@ public class ConfigSyncScreen extends PlateauScreen {
         diff(list, "hotDryBonus", client.hotDryBonus, server.hotDryBonus);
         diff(list, "coldDryMultiplier", client.coldDryMultiplier, server.coldDryMultiplier);
         diff(list, "defaultWaterTemp", client.defaultWaterTemp, server.defaultWaterTemp);
+        diff(list, "enableAdaptation", client.enableAdaptation, server.enableAdaptation);
+        diff(list, "adaptRate", client.adaptRate, server.adaptRate);
+        diff(list, "maxAdaptShift", client.maxAdaptShift, server.maxAdaptShift);
+        diff(list, "adaptStrength", client.adaptStrength, server.adaptStrength);
+        diff(list, "threshHoldExtreme", client.threshHoldExtreme, server.threshHoldExtreme);
         return list;
     }
 

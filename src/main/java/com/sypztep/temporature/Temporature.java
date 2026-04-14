@@ -1,5 +1,7 @@
 package com.sypztep.temporature;
 
+import com.sypztep.temporature.api.TemporatureApi;
+import com.sypztep.temporature.common.PlayerTemperatureComponent;
 import com.sypztep.temporature.common.data.BiomeTemperatureData;
 import com.sypztep.temporature.common.data.BlockTemperatureData;
 import com.sypztep.temporature.common.data.DimensionTemperatureData;
@@ -50,6 +52,23 @@ public class Temporature implements ModInitializer {
 		DynamicRegistries.registerSynced(BLOCK_TEMPERATURES, BlockTemperatureData.CODEC);
 
 		TemperatureLayerRegistry.init();
+
+		// Built-in adaptation rate modifier
+		TemporatureApi.registerRateModifier((player, changeBy, worldTemp, _) -> {
+			TemporatureServerConfig cfg = TemporatureServerConfig.getInstance();
+			if (!cfg.enableAdaptation) return changeBy;
+
+			PlayerTemperatureComponent comp = TemporatureApi.getComponent(player);
+			float adaptShift = comp.getAdaptedBiomeTemp() - PlayerTemperatureComponent.NEUTRAL_TEMP;
+			if (adaptShift == 0) return changeBy;
+
+			double worldShift = worldTemp - PlayerTemperatureComponent.NEUTRAL_TEMP;
+			if (Math.signum(adaptShift) == Math.signum(worldShift)) {
+				double strength = Math.min(Math.abs(adaptShift) / cfg.maxAdaptShift, 1.0) * cfg.adaptStrength;
+				changeBy *= (1.0 - strength);
+			}
+			return changeBy;
+		});
 
 		PayloadTypeRegistry.clientboundPlay().register(ConfigSyncPayloadS2C.ID, ConfigSyncPayloadS2C.CODEC);
 		ServerPlayConnectionEvents.JOIN.register((handler, _, server) -> {

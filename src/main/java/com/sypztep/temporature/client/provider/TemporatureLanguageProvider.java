@@ -82,6 +82,20 @@ public class TemporatureLanguageProvider extends FabricLanguageProvider {
         translate.add(cfg + "wetness.default_water_temp", "Default Water Temperature");
         translate.add(cfg + "wetness.default_water_temp.description", "Fallback water temperature offset in MC units, used when a biome does not define its own waterTemp. Negative values cool the player (default: -23.3\u00B0C = -0.93 MC)");
 
+        // ── Adaptation group ──
+        translate.add(cfg + "adaptation.group", "Biome Adaptation");
+        translate.add(cfg + "adaptation.group.description", "Players gradually acclimatize to biomes they spend time in, shifting their habitable band. Desert dwellers tolerate heat better but become more vulnerable to cold, and vice versa");
+        translate.add(cfg + "adaptation.enable", "Enable Adaptation");
+        translate.add(cfg + "adaptation.enable.description", "Toggle the biome adaptation system. When enabled, players slowly adapt to their current biome's base temperature over in-game days");
+        translate.add(cfg + "adaptation.rate", "Adaptation Rate");
+        translate.add(cfg + "adaptation.rate.description", "EMA rate per tick at which adapted biome temperature drifts toward the current biome. Default 0.00017 (~5 game days to full adapt). Doubled after 1 game day of sustained exposure");
+        translate.add(cfg + "adaptation.max_shift", "Max Adaptation Shift");
+        translate.add(cfg + "adaptation.max_shift.description", "Maximum distance from the neutral temperate band that adaptation can shift the habitable zone, in MC units (default 0.4 = ~10\u00B0C)");
+        translate.add(cfg + "adaptation.strength", "Adaptation Strength");
+        translate.add(cfg + "adaptation.strength.description", "Maximum rate reduction applied when fully adapted and in matching temperature stress direction (default 0.4 = 40% slower accumulation)");
+        translate.add(cfg + "adaptation.threshold_extreme", "Biome Extreme Bias");
+        translate.add(cfg + "adaptation.threshold_extreme.description", "Weights the biome low/high temps that adaptation tracks. 0.5 = true midpoint (stable average). Higher values (e.g. 0.8) bias toward the extreme of the biome — so desert pulls you harder toward hot, and tundra harder toward cold. Adjust if you want more intense acclimatization to biome peaks");
+
         // ── Client Category ──
         translate.add(cfg + "category.client", "Client");
         translate.add(cfg + "category.client.tooltip", "Display and HUD settings (client-side only)");

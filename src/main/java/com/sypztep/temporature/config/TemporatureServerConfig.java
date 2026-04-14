@@ -39,6 +39,11 @@ public final class TemporatureServerConfig {
         dst.hotDryBonus = src.hotDryBonus;
         dst.coldDryMultiplier = src.coldDryMultiplier;
         dst.defaultWaterTemp = src.defaultWaterTemp;
+        dst.enableAdaptation = src.enableAdaptation;
+        dst.adaptRate = src.adaptRate;
+        dst.maxAdaptShift = src.maxAdaptShift;
+        dst.adaptStrength = src.adaptStrength;
+        dst.threshHoldExtreme = src.threshHoldExtreme;
     }
 
     public static final ConfigClassHandler<TemporatureServerConfig> HANDLER = ConfigClassHandler.createBuilder(TemporatureServerConfig.class)
@@ -95,6 +100,23 @@ public final class TemporatureServerConfig {
     @SerialEntry
     public double defaultWaterTemp = -0.93;
 
+    // --- Adaptation ---
+
+    @SerialEntry
+    public boolean enableAdaptation = true;
+
+    @SerialEntry
+    public float adaptRate = 0.00017f;
+
+    @SerialEntry
+    public float maxAdaptShift = 0.4f;
+
+    @SerialEntry
+    public float adaptStrength = 0.4f;
+
+    @SerialEntry
+    public float threshHoldExtreme = 0.5f;
+
     @Override
     public int hashCode() {
         return Objects.hash(
@@ -102,7 +124,8 @@ public final class TemporatureServerConfig {
                 minHabitableTemp, maxHabitableTemp,
                 tempRate, tempDamageInterval, tempBaseDamage, blockScanRadius,
                 waterSoakSpeed, rainSoakSpeed, maxRainWetness,
-                dryRate, hotDryBonus, coldDryMultiplier, defaultWaterTemp
+                dryRate, hotDryBonus, coldDryMultiplier, defaultWaterTemp,
+                enableAdaptation, adaptRate, maxAdaptShift, adaptStrength, threshHoldExtreme
         );
     }
 }

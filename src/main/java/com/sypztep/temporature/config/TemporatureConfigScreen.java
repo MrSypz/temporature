@@ -146,6 +146,68 @@ public final class TemporatureConfigScreen {
                 .build();
 
         // =========================================================
+        // ADAPTATION OPTIONS
+        // =========================================================
+        Option<Boolean> enableAdaptationOpt = Option.<Boolean>createBuilder()
+                .available(!synced)
+                .name(Component.translatable("config.temporature.adaptation.enable"))
+                .description(OptionDescription.of(Component.translatable(synced
+                        ? "config.temporature.server_locked"
+                        : "config.temporature.adaptation.enable.description")))
+                .binding(true, () -> TemporatureServerConfig.getInstance().enableAdaptation,
+                        newVal -> TemporatureServerConfig.getInstance().enableAdaptation = newVal)
+                .controller(TickBoxControllerBuilder::create)
+                .build();
+
+        boolean adaptEnabled = !synced && TemporatureServerConfig.getInstance().enableAdaptation;
+
+        Option<Float> adaptRateOpt = Option.<Float>createBuilder()
+                .available(adaptEnabled)
+                .name(Component.translatable("config.temporature.adaptation.rate"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.adaptation.rate.description")))
+                .binding(0.00017f, () -> TemporatureServerConfig.getInstance().adaptRate,
+                        newVal -> TemporatureServerConfig.getInstance().adaptRate = newVal)
+                .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0.00001f, 0.001f).step(0.00001f))
+                .build();
+
+        Option<Float> maxAdaptShiftOpt = Option.<Float>createBuilder()
+                .available(adaptEnabled)
+                .name(Component.translatable("config.temporature.adaptation.max_shift"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.adaptation.max_shift.description")))
+                .binding(0.4f, () -> TemporatureServerConfig.getInstance().maxAdaptShift,
+                        newVal -> TemporatureServerConfig.getInstance().maxAdaptShift = newVal)
+                .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0.1f, 1.0f).step(0.05f))
+                .build();
+
+        Option<Float> adaptStrengthOpt = Option.<Float>createBuilder()
+                .available(adaptEnabled)
+                .name(Component.translatable("config.temporature.adaptation.strength"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.adaptation.strength.description")))
+                .binding(0.4f, () -> TemporatureServerConfig.getInstance().adaptStrength,
+                        newVal -> TemporatureServerConfig.getInstance().adaptStrength = newVal)
+                .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0.0f, 1.0f).step(0.05f))
+                .build();
+
+        Option<Float> threshHoldExtremeOpt = Option.<Float>createBuilder()
+                .available(adaptEnabled)
+                .name(Component.translatable("config.temporature.adaptation.threshold_extreme"))
+                .description(OptionDescription.of(Component.translatable("config.temporature.adaptation.threshold_extreme.description")))
+                .binding(0.5f, () -> TemporatureServerConfig.getInstance().threshHoldExtreme,
+                        newVal -> TemporatureServerConfig.getInstance().threshHoldExtreme = newVal)
+                .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0.3f, 1.0f).step(0.05f))
+                .build();
+
+        enableAdaptationOpt.addEventListener((option, event) -> {
+            if (event == OptionEventListener.Event.STATE_CHANGE || event == OptionEventListener.Event.INITIAL) {
+                boolean enable = option.pendingValue() && !synced;
+                adaptRateOpt.setAvailable(enable);
+                maxAdaptShiftOpt.setAvailable(enable);
+                adaptStrengthOpt.setAvailable(enable);
+                threshHoldExtremeOpt.setAvailable(enable);
+            }
+        });
+
+        // =========================================================
         // CLIENT OPTIONS
         // =========================================================
         Option<Boolean> showWorldGaugeOpt = Option.<Boolean>createBuilder()
@@ -220,6 +282,15 @@ public final class TemporatureConfigScreen {
                                 .option(hotDryBonusOpt)
                                 .option(coldDryMultiplierOpt)
                                 .option(defaultWaterTempOpt)
+                                .build())
+                        .group(OptionGroup.createBuilder()
+                                .name(Component.translatable("config.temporature.adaptation.group"))
+                                .description(OptionDescription.of(Component.translatable("config.temporature.adaptation.group.description")))
+                                .option(enableAdaptationOpt)
+                                .option(adaptRateOpt)
+                                .option(maxAdaptShiftOpt)
+                                .option(adaptStrengthOpt)
+                                .option(threshHoldExtremeOpt)
                                 .build())
                         .build())
                 .category(ConfigCategory.createBuilder()

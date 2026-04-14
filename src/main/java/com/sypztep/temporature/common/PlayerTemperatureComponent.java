@@ -7,7 +7,9 @@ import com.sypztep.temporature.api.TemporatureApi;
 import com.sypztep.plateau.common.api.PlateauDamageTypes;
 import com.sypztep.temporature.system.temperature.TemperatureHelper;
 import com.sypztep.temporature.system.temperature.WorldHelper;
+import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.level.biome.Biome;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.player.Player;
@@ -30,6 +32,13 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
     private static final float BASE_OFFSET_DECAY_PER_SECOND = 0.95f;
     private static final int DANGER_GRACE_TICKS = 100;
 
+    // Adaptation constants
+    public static final float NEUTRAL_TEMP = 0.5f;
+    public static final float ADAPT_RATE = 0.00017f;
+    public static final float ADAPT_RATE_SUSTAINED = 0.00034f;
+    public static final int SUSTAINED_THRESHOLD = 24000;
+    public static final float BIOME_JUMP_THRESHOLD = 0.5f;
+
     private final Player player;
 
     private float coreTemp;       // body heat accumulator, ±150 scale
@@ -38,6 +47,11 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
     private int baseOffsetTicks;
     private float wetness;
     private float waterTempAccum;
+
+    // Adaptation state
+    private float adaptedBiomeTemp = NEUTRAL_TEMP;
+    private int adaptExposureTicks;
+    private float lastBiomeBase = NEUTRAL_TEMP; // transient, not persisted
 
     private int tickCounter;
     private TemperatureHelper.TempZone currentZone = TemperatureHelper.TempZone.NORMAL;
@@ -53,7 +67,9 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
             BASE_OFFSET_TICKS_TAG = "BaseOffsetTicks",
             WETNESS_TAG = "Wetness",
             WATER_TEMP_ACCUM_TAG = "WaterTempAccum",
-            GRACE_TICKS_TAG = "GraceTicks";
+            GRACE_TICKS_TAG = "GraceTicks",
+            ADAPTED_BIOME_TEMP_TAG = "AdaptedBiomeTemp",
+            ADAPT_EXPOSURE_TICKS_TAG = "AdaptExposureTicks";
 
     public PlayerTemperatureComponent(Player player) {
         this.player = player;
@@ -82,6 +98,14 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
 
     public TemperatureHelper.TempZone getZone() { return currentZone; }
 
+    public float getAdaptedBiomeTemp() { return adaptedBiomeTemp; }
+    public int getAdaptExposureTicks() { return adaptExposureTicks; }
+    public float getAdaptationStrength() {
+        TemporatureServerConfig config = TemporatureServerConfig.getInstance();
+        float shift = Math.abs(adaptedBiomeTemp - NEUTRAL_TEMP);
+        return Math.min(shift / config.maxAdaptShift, 1.0f);
+    }
+
     /**
      * Add a decaying core-temp offset on the ±150 scale (e.g. +10 for warm food).
      */
@@ -102,6 +126,8 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
 
         double world = TemperatureHelper.calculateWorldTemp(player);
         this.worldTemp = (float) world;
+
+        if (config.enableAdaptation) tickAdaptation();
 
         int sign = TemperatureHelper.worldTempSign(world);
         double core = coreTemp;
@@ -185,6 +211,28 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
             }
         }
     }
+    private void tickAdaptation() {
+        if (player.isCreative() || player.isSpectator()) return;
+        if (!player.level().canSeeSky(player.blockPosition())) return;
+        TemporatureServerConfig cfg = TemporatureServerConfig.getInstance();
+        Holder<Biome> biome = player.level().getBiome(player.blockPosition());
+        WorldHelper.BiomeTemp bt = WorldHelper.getBiomeTemperature(player.level(), biome);
+        float biomeBase = (float) ((bt.lowTemp() + bt.highTemp()) * cfg.threshHoldExtreme);
+
+        if (Math.abs(biomeBase - lastBiomeBase) > BIOME_JUMP_THRESHOLD) {
+            adaptExposureTicks = 0;
+        }
+        lastBiomeBase = biomeBase;
+        adaptExposureTicks++;
+
+        float rate = (adaptExposureTicks >= SUSTAINED_THRESHOLD)
+                ? ADAPT_RATE_SUSTAINED
+                : ADAPT_RATE;
+        rate *= cfg.adaptRate / ADAPT_RATE;
+
+        adaptedBiomeTemp += (biomeBase - adaptedBiomeTemp) * rate;
+    }
+
     /**
      * Damage tick. Tier 0 = no damage, Tier 1 = HYPOTHERMIA/HEATSTROKE, Tier 2 = FREEZING/BURNING.
      */
@@ -347,6 +395,9 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
         wetness = input.getFloatOr(WETNESS_TAG, 0f);
         waterTempAccum = input.getFloatOr(WATER_TEMP_ACCUM_TAG, 0f);
         graceTicks = input.getIntOr(GRACE_TICKS_TAG, 0);
+        adaptedBiomeTemp = input.getFloatOr(ADAPTED_BIOME_TEMP_TAG, NEUTRAL_TEMP);
+        adaptExposureTicks = input.getIntOr(ADAPT_EXPOSURE_TICKS_TAG, 0);
+        lastBiomeBase = adaptedBiomeTemp;
         lastCoreTemp = coreTemp;
     }
 
@@ -359,5 +410,7 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
         output.putFloat(WETNESS_TAG, wetness);
         output.putFloat(WATER_TEMP_ACCUM_TAG, waterTempAccum);
         output.putInt(GRACE_TICKS_TAG, graceTicks);
+        output.putFloat(ADAPTED_BIOME_TEMP_TAG, adaptedBiomeTemp);
+        output.putInt(ADAPT_EXPOSURE_TICKS_TAG, adaptExposureTicks);
     }
 }
