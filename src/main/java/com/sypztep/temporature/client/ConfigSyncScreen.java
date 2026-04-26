@@ -1,5 +1,8 @@
 package com.sypztep.temporature.client;
 
+import com.sypztep.plateau.client.v1.ui.core.UISounds;
+import com.sypztep.temporature.Temporature;
+import com.sypztep.temporature.config.RequireSync;
 import com.sypztep.temporature.config.TemporatureServerConfig;
 import com.sypztep.plateau.client.v1.ui.layout.Layout;
 import com.sypztep.plateau.client.v1.ui.layout.RowLayout;
@@ -14,7 +17,9 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.sounds.SoundEvents;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -103,6 +108,7 @@ public class ConfigSyncScreen extends PlateauScreen {
                 _ -> {
                     TemporatureServerConfig.applyFrom(serverCfg);
                     TemporatureServerConfig.setSyncedFromServer(true);
+                    UISounds.play(SoundEvents.EXPERIENCE_ORB_PICKUP,1,1);
                     onClose();
                 });
 
@@ -138,35 +144,17 @@ public class ConfigSyncScreen extends PlateauScreen {
 
     private static List<ConfigDiff> buildDiffs(TemporatureServerConfig client, TemporatureServerConfig server) {
         List<ConfigDiff> list = new ArrayList<>();
-        diff(list, "enableTemperatureSystem", client.enableTemperatureSystem, server.enableTemperatureSystem);
-        diff(list, "minHabitableTemp", client.minHabitableTemp, server.minHabitableTemp);
-        diff(list, "maxHabitableTemp", client.maxHabitableTemp, server.maxHabitableTemp);
-        diff(list, "tempRate", client.tempRate, server.tempRate);
-        diff(list, "tempDamageInterval", client.tempDamageInterval, server.tempDamageInterval);
-        diff(list, "tempBaseDamage", client.tempBaseDamage, server.tempBaseDamage);
-        diff(list, "blockScanRadius", client.blockScanRadius, server.blockScanRadius);
-        diff(list, "waterSoakSpeed", client.waterSoakSpeed, server.waterSoakSpeed);
-        diff(list, "rainSoakSpeed", client.rainSoakSpeed, server.rainSoakSpeed);
-        diff(list, "maxRainWetness", client.maxRainWetness, server.maxRainWetness);
-        diff(list, "dryRate", client.dryRate, server.dryRate);
-        diff(list, "hotDryBonus", client.hotDryBonus, server.hotDryBonus);
-        diff(list, "coldDryMultiplier", client.coldDryMultiplier, server.coldDryMultiplier);
-        diff(list, "defaultWaterTemp", client.defaultWaterTemp, server.defaultWaterTemp);
-        diff(list, "waterTempBiomeFactor", client.waterTempBiomeFactor, server.waterTempBiomeFactor);
-        diff(list, "waterTempOffset", client.waterTempOffset, server.waterTempOffset);
-        diff(list, "residualWaterDriftRate", client.residualWaterDriftRate, server.residualWaterDriftRate);
-        diff(list, "rainWaterTempFactor", client.rainWaterTempFactor, server.rainWaterTempFactor);
-        diff(list, "maxWaterDepth", client.maxWaterDepth, server.maxWaterDepth);
-        diff(list, "deepWaterTemp", client.deepWaterTemp, server.deepWaterTemp);
-        diff(list, "enableAdaptation", client.enableAdaptation, server.enableAdaptation);
-        diff(list, "adaptRate", client.adaptRate, server.adaptRate);
-        diff(list, "maxAdaptShift", client.maxAdaptShift, server.maxAdaptShift);
-        diff(list, "adaptStrength", client.adaptStrength, server.adaptStrength);
-        diff(list, "threshHoldExtreme", client.threshHoldExtreme, server.threshHoldExtreme);
+        for (Field field : TemporatureServerConfig.class.getDeclaredFields()) {
+            if (!field.isAnnotationPresent(RequireSync.class)) continue;
+            field.setAccessible(true);
+            try {
+                Object clientVal = field.get(client);
+                Object serverVal = field.get(server);
+                list.add(new ConfigDiff(field.getName(), clientVal, serverVal, !clientVal.equals(serverVal)));
+            } catch (IllegalAccessException e) {
+                Temporature.LOGGER.error("Failed to diff field '{}': {}", field.getName(), e.getMessage());
+            }
+        }
         return list;
-    }
-
-    private static void diff(List<ConfigDiff> list, String name, Object client, Object server) {
-        list.add(new ConfigDiff(name, client, server, !client.equals(server)));
     }
 }

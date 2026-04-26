@@ -162,7 +162,7 @@ public class TestScreen extends Screen {
 
         Holder<Biome> biome = minecraft.player.level().getBiome(minecraft.player.blockPosition());
         WorldHelper.BiomeTemp bt = WorldHelper.getBiomeTemperature(minecraft.player.level(), biome);
-        float biomeBase = (float) ((bt.lowTemp() + bt.highTemp()) * cfg.threshHoldExtreme);
+        float biomeBase = (float) ((bt.lowTemp() + bt.highTemp()) * cfg.extremeThreshold);
         double biomeBaseC = TemperatureHelper.mcToC(biomeBase);
 
         float strengthPct = cfg.maxAdaptShift > 0

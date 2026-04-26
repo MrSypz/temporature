@@ -221,7 +221,7 @@ public final class PlayerTemperatureComponent implements AutoSyncedComponent, Se
         TemporatureServerConfig cfg = TemporatureServerConfig.getInstance();
         Holder<Biome> biome = player.level().getBiome(player.blockPosition());
         WorldHelper.BiomeTemp bt = WorldHelper.getBiomeTemperature(player.level(), biome);
-        float biomeBase = (float) ((bt.lowTemp() + bt.highTemp()) * cfg.threshHoldExtreme);
+        float biomeBase = (float) ((bt.lowTemp() + bt.highTemp()) * cfg.extremeThreshold);
 
         if (Math.abs(biomeBase - lastBiomeBase) > BIOME_JUMP_THRESHOLD) {
             adaptExposureTicks = 0;

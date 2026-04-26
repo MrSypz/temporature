@@ -12,6 +12,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
+import org.jspecify.annotations.NonNull;
 
 public record ConfigSyncPayloadS2C(String json, int hash) implements CustomPacketPayload {
     private static final Gson GSON = new Gson();
@@ -35,7 +36,7 @@ public record ConfigSyncPayloadS2C(String json, int hash) implements CustomPacke
 
     public static class Receiver implements ClientPlayNetworking.PlayPayloadHandler<ConfigSyncPayloadS2C> {
         @Override
-        public void receive(ConfigSyncPayloadS2C payload, ClientPlayNetworking.Context context) {
+        public void receive(ConfigSyncPayloadS2C payload, ClientPlayNetworking.@NonNull Context context) {
             TemporatureServerConfig serverCfg = GSON.fromJson(payload.json(), TemporatureServerConfig.class);
             if (serverCfg.hashCode() != payload.hash()) {
                 Temporature.LOGGER.warn("Config sync hash mismatch — packet corrupted?");
@@ -47,8 +48,7 @@ public record ConfigSyncPayloadS2C(String json, int hash) implements CustomPacke
 
                 return;
             }
-            Minecraft.getInstance().execute(() ->
-                    Minecraft.getInstance().setScreen(new ConfigSyncScreen(serverCfg, payload.hash())));
+            context.client().setScreen(new ConfigSyncScreen(serverCfg, payload.hash()));
         }
     }
 }

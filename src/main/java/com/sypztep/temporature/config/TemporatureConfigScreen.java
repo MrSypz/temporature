@@ -246,8 +246,8 @@ public final class TemporatureConfigScreen {
                 .available(adaptEnabled)
                 .name(Component.translatable("config.temporature.adaptation.threshold_extreme"))
                 .description(OptionDescription.of(Component.translatable("config.temporature.adaptation.threshold_extreme.description")))
-                .binding(0.5f, () -> TemporatureServerConfig.getInstance().threshHoldExtreme,
-                        newVal -> TemporatureServerConfig.getInstance().threshHoldExtreme = newVal)
+                .binding(0.5f, () -> TemporatureServerConfig.getInstance().extremeThreshold,
+                        newVal -> TemporatureServerConfig.getInstance().extremeThreshold = newVal)
                 .controller(opt -> FloatSliderControllerBuilder.create(opt).range(0.3f, 1.0f).step(0.05f))
                 .build();
 

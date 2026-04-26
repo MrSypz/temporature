@@ -6,8 +6,6 @@ import dev.isxander.yacl3.config.v2.api.SerialEntry;
 import dev.isxander.yacl3.config.v2.api.serializer.GsonConfigSerializerBuilder;
 import net.fabricmc.loader.api.FabricLoader;
 
-import java.util.Objects;
-
 public final class TemporatureServerConfig {
     public TemporatureServerConfig() {}
 
@@ -22,37 +20,16 @@ public final class TemporatureServerConfig {
 
     public static void setSyncedFromServer(boolean synced) { syncedFromServer = synced; }
 
-    /** Copy all fields from a deserialized config into the live instance. */
+    /**
+     * Copies all @Sync fields from src into the live instance.
+     * No manual field list needed — adding @Sync to a new field is enough.
+     */
     public static void applyFrom(TemporatureServerConfig src) {
-        TemporatureServerConfig dst = getInstance();
-        dst.enableTemperatureSystem = src.enableTemperatureSystem;
-        dst.minHabitableTemp = src.minHabitableTemp;
-        dst.maxHabitableTemp = src.maxHabitableTemp;
-        dst.tempRate = src.tempRate;
-        dst.tempDamageInterval = src.tempDamageInterval;
-        dst.tempBaseDamage = src.tempBaseDamage;
-        dst.blockScanRadius = src.blockScanRadius;
-        dst.waterSoakSpeed = src.waterSoakSpeed;
-        dst.rainSoakSpeed = src.rainSoakSpeed;
-        dst.maxRainWetness = src.maxRainWetness;
-        dst.dryRate = src.dryRate;
-        dst.hotDryBonus = src.hotDryBonus;
-        dst.coldDryMultiplier = src.coldDryMultiplier;
-        dst.defaultWaterTemp = src.defaultWaterTemp;
-        dst.waterTempBiomeFactor = src.waterTempBiomeFactor;
-        dst.waterTempOffset = src.waterTempOffset;
-        dst.residualWaterDriftRate = src.residualWaterDriftRate;
-        dst.rainWaterTempFactor = src.rainWaterTempFactor;
-        dst.maxWaterDepth = src.maxWaterDepth;
-        dst.deepWaterTemp = src.deepWaterTemp;
-        dst.enableAdaptation = src.enableAdaptation;
-        dst.adaptRate = src.adaptRate;
-        dst.maxAdaptShift = src.maxAdaptShift;
-        dst.adaptStrength = src.adaptStrength;
-        dst.threshHoldExtreme = src.threshHoldExtreme;
+        ConfigSyncUtil.applyFrom(src, getInstance());
     }
 
-    public static final ConfigClassHandler<TemporatureServerConfig> HANDLER = ConfigClassHandler.createBuilder(TemporatureServerConfig.class)
+    public static final ConfigClassHandler<TemporatureServerConfig> HANDLER = ConfigClassHandler
+            .createBuilder(TemporatureServerConfig.class)
             .id(Temporature.id("config"))
             .serializer(config -> GsonConfigSerializerBuilder.create(config)
                     .setPath(FabricLoader.getInstance().getConfigDir().resolve("temporature_server.json5"))
@@ -62,96 +39,87 @@ public final class TemporatureServerConfig {
 
     // --- Core Temperature ---
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public boolean enableTemperatureSystem = true;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public double minHabitableTemp = 0.4;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public double maxHabitableTemp = 1.5;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public float tempRate = 1.0f;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public int tempDamageInterval = 40;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public float tempBaseDamage = 2f;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public int blockScanRadius = 7;
 
     // --- Wetness ---
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public float waterSoakSpeed = 0.02f;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public float rainSoakSpeed = 0.005f;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public float maxRainWetness = 0.6f;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public float dryRate = 0.0008f;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public float hotDryBonus = 0.0008f;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public float coldDryMultiplier = 0.3f;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public double defaultWaterTemp = -0.93;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public float waterTempBiomeFactor = 0.7f;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public float waterTempOffset = 0.0f;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public float residualWaterDriftRate = 0.0004f;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public float rainWaterTempFactor = 0.8f;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public int maxWaterDepth = 30;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public double deepWaterTemp = 0.16;
 
     // --- Adaptation ---
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public boolean enableAdaptation = true;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public float adaptRate = 0.00017f;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public float maxAdaptShift = 0.4f;
 
-    @SerialEntry
+    @SerialEntry @RequireSync
     public float adaptStrength = 0.4f;
 
-    @SerialEntry
-    public float threshHoldExtreme = 0.5f;
+    @SerialEntry @RequireSync
+    public float extremeThreshold = 0.5f;
 
     @Override
     public int hashCode() {
-        return Objects.hash(
-                enableTemperatureSystem,
-                minHabitableTemp, maxHabitableTemp,
-                tempRate, tempDamageInterval, tempBaseDamage, blockScanRadius,
-                waterSoakSpeed, rainSoakSpeed, maxRainWetness,
-                dryRate, hotDryBonus, coldDryMultiplier, defaultWaterTemp,
-                waterTempBiomeFactor, waterTempOffset, residualWaterDriftRate, rainWaterTempFactor,
-                maxWaterDepth, deepWaterTemp,
-                enableAdaptation, adaptRate, maxAdaptShift, adaptStrength, threshHoldExtreme
-        );
+        return ConfigSyncUtil.syncHashCode(this);
     }
 }
