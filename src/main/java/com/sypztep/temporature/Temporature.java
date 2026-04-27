@@ -6,7 +6,13 @@ import com.sypztep.temporature.common.data.BiomeTemperatureData;
 import com.sypztep.temporature.common.data.BlockTemperatureData;
 import com.sypztep.temporature.common.data.DimensionTemperatureData;
 import com.sypztep.temporature.common.data.StructureTemperatureData;
-import com.sypztep.temporature.common.network.*;
+import com.sypztep.temporature.common.network.ConfigSyncManager;
+import com.sypztep.temporature.common.network.ConfigSyncRegistry;
+import com.sypztep.temporature.common.network.payload.SyncAckC2S;
+import com.sypztep.temporature.common.network.payload.SyncDataS2C;
+import com.sypztep.temporature.common.network.payload.SyncHelloS2C;
+import com.sypztep.temporature.common.network.payload.SyncResponseC2S;
+import com.sypztep.temporature.config.ConfigSyncUtil;
 import com.sypztep.temporature.config.TemporatureServerConfig;
 import com.sypztep.plateau.common.api.PlateauDamageTypes;
 import com.sypztep.temporature.system.temperature.TemperatureLayerRegistry;
@@ -23,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Temporature implements ModInitializer {
-	public static final String MODID = "temporature";
+	public static final String MODID  = "temporature";
 	public static final Logger LOGGER = LoggerFactory.getLogger("Temporature");
 
 	public static final ResourceKey<DamageType> HYPOTHERMIA = PlateauDamageTypes.createKey(id("hypothermia"));
@@ -49,6 +55,21 @@ public class Temporature implements ModInitializer {
 
 		TemperatureLayerRegistry.init();
 
+		// ── Register this mod's config for universal sync ─────────────────────
+		//
+		// The applier also sets the "synced from server" flag so the client config
+		// is restored to the local file on disconnect (see TemporatureClient).
+		ConfigSyncRegistry.register(
+				MODID,
+				TemporatureServerConfig::getInstance,
+				TemporatureServerConfig.class,
+				cfg -> {
+					TemporatureServerConfig.applyFrom(cfg);
+					TemporatureServerConfig.setSyncedFromServer(true);
+				},
+				ConfigSyncUtil::syncHashCode
+		);
+
 		TemporatureApi.registerRateModifier((player, changeBy, worldTemp, _) -> {
 			TemporatureServerConfig cfg = TemporatureServerConfig.getInstance();
 			if (!cfg.enableAdaptation) return changeBy;
@@ -65,24 +86,21 @@ public class Temporature implements ModInitializer {
 			return changeBy;
 		});
 
-		registerPackets();
+		registerPayloads();
 		registerEvents();
 	}
 
-	private static void registerPackets() {
-		PayloadTypeRegistry.clientboundPlay().register(ConfigHelloS2C.ID, ConfigHelloS2C.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(ConfigDataS2C.ID,  ConfigDataS2C.CODEC);
+	private static void registerPayloads() {
+		PayloadTypeRegistry.clientboundPlay().register(SyncHelloS2C.ID, SyncHelloS2C.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(SyncDataS2C.ID,  SyncDataS2C.CODEC);
 
-		PayloadTypeRegistry.serverboundPlay().register(ConfigReadyC2S.ID,   ConfigReadyC2S.CODEC);
-		PayloadTypeRegistry.serverboundPlay().register(ConfigRequestC2S.ID, ConfigRequestC2S.CODEC);
-		PayloadTypeRegistry.serverboundPlay().register(ConfigAckC2S.ID,     ConfigAckC2S.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(SyncResponseC2S.ID, SyncResponseC2S.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(SyncAckC2S.ID,      SyncAckC2S.CODEC);
 
-		ServerPlayNetworking.registerGlobalReceiver(ConfigReadyC2S.ID,
-				(pkt, ctx) -> ConfigSyncManager.onConfigReady(ctx.player(), pkt));
-		ServerPlayNetworking.registerGlobalReceiver(ConfigRequestC2S.ID,
-				(pkt, ctx) -> ConfigSyncManager.onConfigRequest(ctx.player(), pkt));
-		ServerPlayNetworking.registerGlobalReceiver(ConfigAckC2S.ID,
-				(pkt, ctx) -> ConfigSyncManager.onConfigAck(ctx.player(), pkt));
+		ServerPlayNetworking.registerGlobalReceiver(SyncResponseC2S.ID,
+				(pkt, ctx) -> ConfigSyncManager.onSyncResponse(ctx.player(), pkt));
+		ServerPlayNetworking.registerGlobalReceiver(SyncAckC2S.ID,
+				(pkt, ctx) -> ConfigSyncManager.onSyncAck(ctx.player(), pkt));
 	}
 
 	private static void registerEvents() {

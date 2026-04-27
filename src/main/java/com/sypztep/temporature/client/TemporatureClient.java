@@ -2,8 +2,9 @@ package com.sypztep.temporature.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.sypztep.temporature.Temporature;
-import com.sypztep.temporature.common.network.ConfigDataS2C;
-import com.sypztep.temporature.common.network.ConfigHelloS2C;
+import com.sypztep.temporature.common.network.payload.SyncDataS2C;
+import com.sypztep.temporature.common.network.payload.SyncHelloS2C;
+import com.sypztep.temporature.config.ServerConfigCache;
 import com.sypztep.temporature.config.TemporatureClientConfig;
 import com.sypztep.temporature.config.TemporatureServerConfig;
 import net.fabricmc.api.ClientModInitializer;
@@ -25,23 +26,31 @@ public class TemporatureClient implements ClientModInitializer {
         TemporatureServerConfig.HANDLER.load();
         TemporatureClientConfig.HANDLER.load();
 
-        METABOLISM = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.temporature.metabolism", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, SURVIVAL));
+        METABOLISM = KeyMappingHelper.registerKeyMapping(
+                new KeyMapping("key.temporature.metabolism", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, SURVIVAL));
         KeyEvent.register();
 
         FreezeOverlayHudRenderer.register();
         HeatHazeRenderer.register();
         WorldGaugeHudRenderer.register();
 
-        ClientPlayNetworking.registerGlobalReceiver(ConfigDataS2C.ID, new ConfigDataS2C.Receiver());
-        ClientPlayNetworking.registerGlobalReceiver(ConfigHelloS2C.ID, new ConfigHelloS2C.Receiver());
-        ClientPlayConnectionEvents.DISCONNECT.register((_, _) -> {
+        ClientPlayNetworking.registerGlobalReceiver(SyncHelloS2C.ID, new SyncHelloS2C.Receiver());
+        ClientPlayNetworking.registerGlobalReceiver(SyncDataS2C.ID,  new SyncDataS2C.Receiver());
+
+        ClientPlayConnectionEvents.DISCONNECT.register((_, client) -> {
             if (TemporatureServerConfig.isSyncedFromServer()) {
                 TemporatureServerConfig.HANDLER.load();
                 TemporatureServerConfig.setSyncedFromServer(false);
                 Temporature.LOGGER.info("Restored local server config after disconnect");
             }
+
+            String addr = client.getCurrentServer() != null
+                    ? client.getCurrentServer().ip
+                    : null;
+            if (addr != null) ServerConfigCache.evict(addr);
         });
     }
+
     public static class KeyEvent implements ClientTickEvents.EndTick {
         public KeyEvent() {}
 

@@ -1,14 +1,16 @@
 package com.sypztep.temporature.common.network;
 
-import com.google.gson.Gson;
 import com.sypztep.temporature.Temporature;
-import com.sypztep.temporature.config.TemporatureServerConfig;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import com.sypztep.temporature.common.network.payload.SyncAckC2S;
+import com.sypztep.temporature.common.network.payload.SyncDataS2C;
+import com.sypztep.temporature.common.network.payload.SyncHelloS2C;
+import com.sypztep.temporature.common.network.payload.SyncResponseC2S;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.GameType;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,99 +19,120 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Server-side state machine for the config sync handshake.
+ * Server-side state machine for the universal config sync handshake.
  *
- * <p>Flow A — fast path (cache hit):
- *   JOIN → freeze → ConfigHelloS2C → ConfigReadyC2S → verify → unfreeze
+ * <h3>Fast path (all caches valid):</h3>
+ * <pre>
+ *   JOIN → freeze → SyncHelloS2C → SyncResponseC2S(missing=[], hash) → verify → unfreeze
+ * </pre>
  *
- * <p>Flow B — slow path (no cache or stale):
- *   JOIN → freeze → ConfigHelloS2C → ConfigRequestC2S → ConfigDataS2C → ConfigAckC2S → verify → unfreeze
+ * <h3>Slow path (one or more caches stale):</h3>
+ * <pre>
+ *   JOIN → freeze → SyncHelloS2C → SyncResponseC2S(missing=[…]) → SyncDataS2C → SyncAckC2S → verify → unfreeze
+ * </pre>
  *
- * <p>If the client sends ConfigReadyC2S with a stale hash, the server silently
- * falls through to the slow path without disconnecting the player.
+ * <p>If the fast-path master hash mismatches, the server silently upgrades to the slow
+ * path and sends data for <em>all</em> namespaces rather than disconnecting the player.
  *
- * <p>A 10-second timeout releases frozen players if the handshake never completes,
- * preventing permanent spectator lock on buggy or slow clients.
+ * <p>A {@value #TIMEOUT_SECONDS}-second watchdog releases frozen players if the
+ * handshake never completes, preventing a permanent spectator lock on buggy clients.
  */
 public final class ConfigSyncManager {
 
     private ConfigSyncManager() {}
 
-    private static final Gson GSON = new Gson();
     private static final int TIMEOUT_SECONDS = 10;
 
     public enum SyncState {
-        AWAITING_RESPONSE,  // sent Hello, waiting for Ready or Request
-        AWAITING_ACK        // sent Data, waiting for Ack
+        AWAITING_RESPONSE,  // sent Hello, waiting for SyncResponseC2S
+        AWAITING_ACK        // sent Data, waiting for SyncAckC2S
     }
 
     private record SyncEntry(GameType realMode, SyncState state) {}
 
-    // ConcurrentHashMap: JOIN events and packet handlers can fire on different threads
     private static final Map<UUID, SyncEntry> pending = new ConcurrentHashMap<>();
 
-    private static final ScheduledExecutorService TIMEOUT_EXECUTOR = Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread t = new Thread(r, "temporature-sync-timeout");
-        t.setDaemon(true);
-        return t;
-    });
+    private static final ScheduledExecutorService TIMEOUT_EXECUTOR =
+            Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "temporature-sync-timeout");
+                t.setDaemon(true);
+                return t;
+            });
+
+    // -------------------------------------------------------------------------
+    // Lifecycle hooks (called from ServerPlayConnectionEvents)
+    // -------------------------------------------------------------------------
 
     public static void onPlayerJoin(ServerPlayer player, MinecraftServer server) {
         GameType real = player.gameMode.getGameModeForPlayer();
         pending.put(player.getUUID(), new SyncEntry(real, SyncState.AWAITING_RESPONSE));
         player.setGameMode(GameType.SPECTATOR);
 
-        int hash = TemporatureServerConfig.getInstance().hashCode();
-        ServerPlayNetworking.send(player, new ConfigHelloS2C(hash));
-
+        SyncHelloS2C.send(player);
         scheduleTimeout(server, player);
-        Temporature.LOGGER.info("Config sync started for {} (hash={})", player.getName().getString(), hash);
+
+        Temporature.LOGGER.info(
+                "Config sync started for {} (masterHash={})",
+                player.getName().getString(), ConfigSyncRegistry.masterHash());
     }
 
     public static void onPlayerDisconnect(ServerPlayer player) {
         pending.remove(player.getUUID());
     }
 
-    /** Called when client replies with ConfigReadyC2S (fast path — claims cache hit). */
-    public static void onConfigReady(ServerPlayer player, ConfigReadyC2S pkt) {
+    // -------------------------------------------------------------------------
+    // Packet handlers (called from ServerPlayNetworking receivers)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Called when client replies with {@link SyncResponseC2S}.
+     *
+     * <ul>
+     *   <li>Fast path — {@code missing} is empty and client sends its master hash.</li>
+     *   <li>Slow path — {@code missing} lists which namespaces the client needs.</li>
+     * </ul>
+     */
+    public static void onSyncResponse(ServerPlayer player, SyncResponseC2S pkt) {
         SyncEntry entry = pending.get(player.getUUID());
         if (entry == null || entry.state() != SyncState.AWAITING_RESPONSE) return;
 
-        int expected = TemporatureServerConfig.getInstance().hashCode();
-        if (pkt.hash() != expected) {
-            // Stale cache — don't disconnect, silently upgrade to slow path
+        if (pkt.isFastPath()) {
+            int expected = ConfigSyncRegistry.masterHash();
+
+            if (pkt.masterHash() == expected) {
+                // ── Fast path: hashes agree → unfreeze immediately ──────────
+                unfreeze(player, entry.realMode());
+            } else {
+                // ── Stale fast path: master hash mismatch → slow-path all ───
+                Temporature.LOGGER.info(
+                        "Fast-path hash mismatch from {} (got={} expected={}) — sending full config",
+                        player.getName().getString(), pkt.masterHash(), expected);
+                pending.put(player.getUUID(), new SyncEntry(entry.realMode(), SyncState.AWAITING_ACK));
+                SyncDataS2C.send(player, new ArrayList<>(ConfigSyncRegistry.namespaces()));
+            }
+
+        } else {
+            // ── Slow path: send only what the client asked for ───────────────
             Temporature.LOGGER.info(
-                    "Ready hash mismatch from {} (got={} expected={}) — sending fresh config",
-                    player.getName().getString(), pkt.hash(), expected);
+                    "Sending config data for {} namespace(s) to {}",
+                    pkt.missing().size(), player.getName().getString());
             pending.put(player.getUUID(), new SyncEntry(entry.realMode(), SyncState.AWAITING_ACK));
-            ServerPlayNetworking.send(player, buildDataPacket(expected));
-            return;
+            SyncDataS2C.send(player, pkt.missing());
         }
-
-        unfreeze(player, entry.realMode());
     }
 
-    /** Called when client replies with ConfigRequestC2S (slow path — no valid cache). */
-    public static void onConfigRequest(ServerPlayer player, ConfigRequestC2S pkt) {
-        SyncEntry entry = pending.get(player.getUUID());
-        if (entry == null || entry.state() != SyncState.AWAITING_RESPONSE) return;
-
-        int hash = TemporatureServerConfig.getInstance().hashCode();
-        pending.put(player.getUUID(), new SyncEntry(entry.realMode(), SyncState.AWAITING_ACK));
-        ServerPlayNetworking.send(player, buildDataPacket(hash));
-        Temporature.LOGGER.info("Sent full config to {}", player.getName().getString());
-    }
-
-    /** Called when client replies with ConfigAckC2S (slow path — confirms it applied data). */
-    public static void onConfigAck(ServerPlayer player, ConfigAckC2S pkt) {
+    /**
+     * Called when client replies with {@link SyncAckC2S} (slow path confirmation).
+     */
+    public static void onSyncAck(ServerPlayer player, SyncAckC2S pkt) {
         SyncEntry entry = pending.get(player.getUUID());
         if (entry == null || entry.state() != SyncState.AWAITING_ACK) return;
 
-        int expected = TemporatureServerConfig.getInstance().hashCode();
-        if (pkt.hash() != expected) {
+        int expected = ConfigSyncRegistry.masterHash();
+        if (pkt.masterHash() != expected) {
             Temporature.LOGGER.warn(
-                    "Ack hash mismatch from {} (got={} expected={}) — kicking",
-                    player.getName().getString(), pkt.hash(), expected);
+                    "Ack master-hash mismatch from {} (got={} expected={}) — kicking",
+                    player.getName().getString(), pkt.masterHash(), expected);
             pending.remove(player.getUUID());
             player.connection.disconnect(Component.literal(
                     "[Temporature] Config sync failed. Please rejoin."));
@@ -129,10 +152,6 @@ public final class ConfigSyncManager {
         Temporature.LOGGER.info(
                 "Config sync complete for {}, restored game mode {}",
                 player.getName().getString(), mode);
-    }
-
-    private static ConfigDataS2C buildDataPacket(int hash) {
-        return new ConfigDataS2C(GSON.toJson(TemporatureServerConfig.getInstance()), hash);
     }
 
     private static void scheduleTimeout(MinecraftServer server, ServerPlayer player) {
