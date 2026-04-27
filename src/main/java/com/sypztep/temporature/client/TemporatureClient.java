@@ -2,7 +2,8 @@ package com.sypztep.temporature.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.sypztep.temporature.Temporature;
-import com.sypztep.temporature.common.network.ConfigSyncPayloadS2C;
+import com.sypztep.temporature.common.network.ConfigDataS2C;
+import com.sypztep.temporature.common.network.ConfigHelloS2C;
 import com.sypztep.temporature.config.TemporatureClientConfig;
 import com.sypztep.temporature.config.TemporatureServerConfig;
 import net.fabricmc.api.ClientModInitializer;
@@ -31,8 +32,8 @@ public class TemporatureClient implements ClientModInitializer {
         HeatHazeRenderer.register();
         WorldGaugeHudRenderer.register();
 
-        // Config sync: receive server config and restore local on disconnect
-        ClientPlayNetworking.registerGlobalReceiver(ConfigSyncPayloadS2C.ID, new ConfigSyncPayloadS2C.Receiver());
+        ClientPlayNetworking.registerGlobalReceiver(ConfigDataS2C.ID, new ConfigDataS2C.Receiver());
+        ClientPlayNetworking.registerGlobalReceiver(ConfigHelloS2C.ID, new ConfigHelloS2C.Receiver());
         ClientPlayConnectionEvents.DISCONNECT.register((_, _) -> {
             if (TemporatureServerConfig.isSyncedFromServer()) {
                 TemporatureServerConfig.HANDLER.load();
