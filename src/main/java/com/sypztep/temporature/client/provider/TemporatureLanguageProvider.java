@@ -122,5 +122,10 @@ public class TemporatureLanguageProvider extends FabricLanguageProvider {
         translate.add(cfg + "client.temperature_unit.description", "Unit used for temperature display on the HUD");
         translate.add(cfg + "client.unit.celsius", "Celsius (°C)");
         translate.add(cfg + "client.unit.fahrenheit", "Fahrenheit (°F)");
+
+        // ── Config Sync Screen ──
+        translate.add("screen.temporature.config_sync.col_name","Name");
+        translate.add("screen.temporature.config_sync.col_yours","Your value");
+        translate.add("screen.temporature.config_sync.col_server", "Server value");
     }
 }
