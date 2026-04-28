@@ -54,6 +54,7 @@ dependencies {
 	implementation "com.github.MrSypz.PlateauLib:PlateauLib:${project.plateaulib}"
 	implementation "com.github.MrSypz.PlateauLib:PostProcess:${project.plateaulib}"
 	implementation "com.github.MrSypz.PlateauLib:UI:${project.plateaulib}"
+	implementation "com.github.MrSypz.PlateauLib:SyncConfig:${project.plateaulib}"
 
 	localRuntime "maven.modrinth:sodium:${sodium_version}"
 

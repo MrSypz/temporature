@@ -6,21 +6,11 @@ import com.sypztep.temporature.common.data.BiomeTemperatureData;
 import com.sypztep.temporature.common.data.BlockTemperatureData;
 import com.sypztep.temporature.common.data.DimensionTemperatureData;
 import com.sypztep.temporature.common.data.StructureTemperatureData;
-import com.sypztep.temporature.common.network.ConfigSyncManager;
-import com.sypztep.temporature.common.network.ConfigSyncRegistry;
-import com.sypztep.temporature.common.network.payload.SyncAckC2S;
-import com.sypztep.temporature.common.network.payload.SyncDataS2C;
-import com.sypztep.temporature.common.network.payload.SyncHelloS2C;
-import com.sypztep.temporature.common.network.payload.SyncResponseC2S;
-import com.sypztep.temporature.config.ConfigSyncUtil;
 import com.sypztep.temporature.config.TemporatureServerConfig;
 import com.sypztep.plateau.common.api.PlateauDamageTypes;
 import com.sypztep.temporature.system.temperature.TemperatureLayerRegistry;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.registry.DynamicRegistries;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -55,21 +45,6 @@ public class Temporature implements ModInitializer {
 
 		TemperatureLayerRegistry.init();
 
-		// ── Register this mod's config for universal sync ─────────────────────
-		//
-		// The applier also sets the "synced from server" flag so the client config
-		// is restored to the local file on disconnect (see TemporatureClient).
-		ConfigSyncRegistry.register(
-				MODID,
-				TemporatureServerConfig::getInstance,
-				TemporatureServerConfig.class,
-				cfg -> {
-					TemporatureServerConfig.applyFrom(cfg);
-					TemporatureServerConfig.setSyncedFromServer(true);
-				},
-				ConfigSyncUtil::syncHashCode
-		);
-
 		TemporatureApi.registerRateModifier((player, changeBy, worldTemp, _) -> {
 			TemporatureServerConfig cfg = TemporatureServerConfig.getInstance();
 			if (!cfg.enableAdaptation) return changeBy;
@@ -85,31 +60,5 @@ public class Temporature implements ModInitializer {
 			}
 			return changeBy;
 		});
-
-		registerPayloads();
-		registerEvents();
-	}
-
-	private static void registerPayloads() {
-		PayloadTypeRegistry.clientboundPlay().register(SyncHelloS2C.ID, SyncHelloS2C.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(SyncDataS2C.ID,  SyncDataS2C.CODEC);
-
-		PayloadTypeRegistry.serverboundPlay().register(SyncResponseC2S.ID, SyncResponseC2S.CODEC);
-		PayloadTypeRegistry.serverboundPlay().register(SyncAckC2S.ID,      SyncAckC2S.CODEC);
-
-		ServerPlayNetworking.registerGlobalReceiver(SyncResponseC2S.ID,
-				(pkt, ctx) -> ConfigSyncManager.onSyncResponse(ctx.player(), pkt));
-		ServerPlayNetworking.registerGlobalReceiver(SyncAckC2S.ID,
-				(pkt, ctx) -> ConfigSyncManager.onSyncAck(ctx.player(), pkt));
-	}
-
-	private static void registerEvents() {
-		ServerPlayConnectionEvents.JOIN.register((handler, _, server) -> {
-			if (server.isDedicatedServer())
-				ConfigSyncManager.onPlayerJoin(handler.getPlayer(), server);
-		});
-
-		ServerPlayConnectionEvents.DISCONNECT.register((handler, _) ->
-				ConfigSyncManager.onPlayerDisconnect(handler.getPlayer()));
 	}
 }

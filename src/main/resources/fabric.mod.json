@@ -27,6 +27,9 @@
 		],
 		"fabric-datagen": [
           "com.sypztep.temporature.TemporatureDataGenerator"
+		],
+		"plateau-sync-config": [
+			"com.sypztep.temporature.config.TemporatureServerConfig"
 		]
 	},
 	"mixins": [

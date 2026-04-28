@@ -1,31 +1,25 @@
 package com.sypztep.temporature.config;
 
+import com.sypztep.plateau.common.v1.config.RequireSync;
+import com.sypztep.plateau.common.v1.config.SyncConfigEntrypoint;
+import com.sypztep.plateau.common.v1.network.ConfigSyncRegistry;
 import com.sypztep.temporature.Temporature;
 import dev.isxander.yacl3.config.v2.api.ConfigClassHandler;
 import dev.isxander.yacl3.config.v2.api.SerialEntry;
 import dev.isxander.yacl3.config.v2.api.serializer.GsonConfigSerializerBuilder;
 import net.fabricmc.loader.api.FabricLoader;
 
-public final class TemporatureServerConfig {
+public final class TemporatureServerConfig implements SyncConfigEntrypoint {
     public TemporatureServerConfig() {}
-
-    private static boolean syncedFromServer = false;
 
     public static TemporatureServerConfig getInstance() {
         return HANDLER.instance();
     }
 
-    /** True when the client is using config values received from a server. */
-    public static boolean isSyncedFromServer() { return syncedFromServer; }
 
-    public static void setSyncedFromServer(boolean synced) { syncedFromServer = synced; }
-
-    /**
-     * Copies all @Sync fields from src into the live instance.
-     * No manual field list needed — adding @Sync to a new field is enough.
-     */
-    public static void applyFrom(TemporatureServerConfig src) {
-        ConfigSyncUtil.applyFrom(src, getInstance());
+    @Override
+    public void registerSyncConfigs() {
+        ConfigSyncRegistry.register(Temporature.MODID, TemporatureServerConfig::getInstance, TemporatureServerConfig.class);
     }
 
     public static final ConfigClassHandler<TemporatureServerConfig> HANDLER = ConfigClassHandler
@@ -118,8 +112,4 @@ public final class TemporatureServerConfig {
     @SerialEntry @RequireSync
     public float extremeThreshold = 0.5f;
 
-    @Override
-    public int hashCode() {
-        return ConfigSyncUtil.syncHashCode(this);
-    }
 }

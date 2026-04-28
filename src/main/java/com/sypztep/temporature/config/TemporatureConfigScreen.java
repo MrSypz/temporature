@@ -1,5 +1,7 @@
 package com.sypztep.temporature.config;
 
+import com.sypztep.plateau.common.v1.network.ConfigSyncRegistry;
+import com.sypztep.temporature.Temporature;
 import com.sypztep.temporature.client.TemperatureUnit;
 import dev.isxander.yacl3.api.*;
 import dev.isxander.yacl3.api.controller.*;
@@ -8,7 +10,7 @@ import net.minecraft.network.chat.Component;
 
 public final class TemporatureConfigScreen {
     public static Screen buildScreen(Screen screen) {
-        boolean synced = TemporatureServerConfig.isSyncedFromServer();
+        boolean synced = ConfigSyncRegistry.isSyncedFromServer(Temporature.MODID);
         boolean tempEnabled = !synced && TemporatureServerConfig.getInstance().enableTemperatureSystem;
 
         // =========================================================
