@@ -113,9 +113,8 @@ public final class ConfigSyncManager {
 
         } else {
             // ── Slow path: send only what the client asked for ───────────────
-            Temporature.LOGGER.info(
-                    "Sending config data for {} namespace(s) to {}",
-                    pkt.missing().size(), player.getName().getString());
+            Temporature.LOGGER.info("Sending data for [{}] to {}",
+                    String.join(", ", pkt.missing()), player.getName().getString());
             pending.put(player.getUUID(), new SyncEntry(entry.realMode(), SyncState.AWAITING_ACK));
             SyncDataS2C.send(player, pkt.missing());
         }
